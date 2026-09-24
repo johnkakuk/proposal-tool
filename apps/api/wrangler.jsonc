@@ -1,0 +1,40 @@
+{
+  // Bridger Proposals Worker: REST API, MCP server, OAuth, tracking ingest, cron (SPEC §2).
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "bridger-proposals-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Everything else on the hostname is served by Cloudflare Pages.
+  "routes": [
+    { "pattern": "proposals.bridgerdigital.com/api/*", "zone_name": "bridgerdigital.com" },
+    { "pattern": "proposals.bridgerdigital.com/mcp", "zone_name": "bridgerdigital.com" },
+    { "pattern": "proposals.bridgerdigital.com/mcp/*", "zone_name": "bridgerdigital.com" },
+    { "pattern": "proposals.bridgerdigital.com/oauth/*", "zone_name": "bridgerdigital.com" },
+    { "pattern": "proposals.bridgerdigital.com/.well-known/*", "zone_name": "bridgerdigital.com" },
+    { "pattern": "proposals.bridgerdigital.com/t/*", "zone_name": "bridgerdigital.com" }
+  ],
+
+  "vars": {
+    "APP_URL": "https://proposals.bridgerdigital.com",
+    "OWNER_EMAIL": "john@bridgerdigital.com"
+  },
+
+  // Replace the ids with the output of `wrangler kv namespace create OAUTH_KV` / `RATE_KV`.
+  // Local dev (`wrangler dev`) simulates KV and ignores these ids.
+  "kv_namespaces": [
+    { "binding": "OAUTH_KV", "id": "REPLACE_WITH_OAUTH_KV_ID" },
+    { "binding": "RATE_KV", "id": "REPLACE_WITH_RATE_KV_ID" }
+  ],
+
+  // Browser Rendering binding for PDFs is added in Phase 4, after confirming free-tier limits (SPEC §2, §12).
+
+  "triggers": {
+    // Cron runs in UTC. 10:00 UTC ≈ 03:00 Pacific. The digest job runs inside the hourly
+    // trigger and checks the owner's local time (SPEC §13).
+    "crons": ["0 * * * *", "0 10 * * *"]
+  },
+
+  "observability": { "enabled": true }
+}

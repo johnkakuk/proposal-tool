@@ -1,0 +1,9 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit .dev.vars.
+# Values below match `supabase start` defaults; run `supabase status` to confirm.
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_JWT_SECRET=
+RESEND_API_KEY=
+TRACKING_SALT=change-me-to-a-long-random-string
+APP_URL=http://localhost:5173
+OWNER_EMAIL=owner@bridger.local
