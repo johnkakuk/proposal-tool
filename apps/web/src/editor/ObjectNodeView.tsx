@@ -1,4 +1,4 @@
-import { NodeSelection } from "@tiptap/pm/state";
+import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 import { blockLabel, getBlockUI } from "../blocks";
@@ -69,6 +69,16 @@ export function ObjectNodeView({ node, editor, getPos, updateAttributes, deleteN
     editor.view.dispatch(editor.state.tr.insert(from + node.nodeSize, copy));
   };
 
+  /** Adds an empty line after the object and puts the caret there (objects can sit back to back). */
+  const insertLineBelow = () => {
+    const from = pos();
+    if (from === undefined) return;
+    const at = from + node.nodeSize;
+    const tr = editor.state.tr.insert(at, editor.schema.nodes.paragraph!.create());
+    editor.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, at + 1)).scrollIntoView());
+    editor.commands.focus();
+  };
+
   const closeEditor = () => {
     setEditing(false);
     const from = pos();
@@ -103,6 +113,9 @@ export function ObjectNodeView({ node, editor, getPos, updateAttributes, deleteN
             >
               {editing ? "Done" : "Edit"}
             </button>
+            <IconButton label="Insert line below" onClick={insertLineBelow}>
+              ↵
+            </IconButton>
             <IconButton label="Move up" onClick={() => move(-1)}>
               ↑
             </IconButton>

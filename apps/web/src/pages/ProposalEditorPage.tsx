@@ -27,7 +27,13 @@ export function ProposalEditorPage() {
   return <ProposalEditorLoaded key={proposal.id} proposal={proposal} brand={settings.data?.brand?.theme ?? null} ownerSignatureName={settings.data?.ownerSignatureName} />;
 }
 
-const PHASE3 = "Available once publishing ships (Phase 3)";
+const LATER = "Coming in a later phase";
+
+interface PublishResponse {
+  proposal: ProposalDetail;
+  published: boolean;
+  publicUrl: string;
+}
 
 function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposal: ProposalDetail; brand: import("@bridger/shared").Theme | null; ownerSignatureName?: string }) {
   const locked = Boolean(proposal.signed_at) || proposal.status === "archived";
@@ -36,6 +42,12 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
   const [expiresAt, setExpiresAt] = useState<string | null>(proposal.expires_at);
   const [doc, setDoc] = useState<{ content: ProposalContent; pricing: Pricing } | null>(null);
   const [status, setStatus] = useState(proposal.status);
+  const [published, setPublished] = useState({ version: proposal.current_version, unpublished: proposal.has_unpublished_changes });
+  const [share, setShare] = useState<string | null>(null);
+  const [publishIssues, setPublishIssues] = useState<string[] | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const publicUrl = `${window.location.origin}/p/${proposal.slug}`;
   const base = useRef(proposal.updated_at);
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -52,6 +64,7 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
       const updated = await api<ProposalDetail>(`/proposals/${proposal.id}`, { method: "PATCH", json: { ...d, baseUpdatedAt: base.current } });
       base.current = updated.updated_at;
       setStatus(updated.status);
+      setPublished({ version: updated.current_version, unpublished: updated.has_unpublished_changes });
       void qc.invalidateQueries({ queryKey: ["proposals"] });
     },
     [proposal.id, qc],
@@ -61,6 +74,35 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
 
   const duplicate = (asRevision: boolean) =>
     action.mutate({ id: proposal.id, action: "duplicate", json: { asRevision } }, { onSuccess: (p) => navigate(`/app/proposals/${p.id}`) });
+
+  const publish = async () => {
+    setPublishing(true);
+    try {
+      await flush();
+      const r = await api<PublishResponse>(`/proposals/${proposal.id}/publish`, { method: "POST" });
+      base.current = r.proposal.updated_at;
+      setStatus(r.proposal.status);
+      setExpiresAt(r.proposal.expires_at);
+      setPublished({ version: r.proposal.current_version, unpublished: r.proposal.has_unpublished_changes });
+      setShare(r.publicUrl);
+      void qc.invalidateQueries({ queryKey: ["proposals"] });
+    } catch (e) {
+      setPublishIssues(e instanceof ApiRequestError && e.issues.length ? e.issues.map((i) => i.message) : [e instanceof Error ? e.message : "Publishing failed"]);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(publicUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    void api(`/proposals/${proposal.id}/events`, { method: "POST", json: { type: "link_copied" } }).catch(() => {});
+  };
+
+  const isLive = published.version > 0;
+  const upToDate = isLive && !published.unpublished && status !== "expired";
+  const publishLabel = !isLive ? "Publish" : upToDate ? "Published ✓" : "Update";
 
   const conflict = state.kind === "error" && state.error instanceof ApiRequestError && state.error.status === 409;
 
@@ -89,20 +131,33 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
               onChange={(e) => setTitle(e.target.value)}
             />
             <StatusChip status={status} />
+            {isLive && published.unpublished && !locked && (
+              <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800" title="The client sees the last published version until you update.">
+                Unpublished changes
+              </span>
+            )}
           </>
         }
         actions={
           <div className="relative flex items-center gap-2">
-            <Button variant="primary" disabled title={PHASE3}>
-              Publish
-            </Button>
+            {!locked && (
+              <Button variant="primary" onClick={() => void publish()} disabled={publishing || upToDate} title={upToDate ? "The client sees the latest version" : undefined}>
+                {publishing ? "Publishing…" : publishLabel}
+              </Button>
+            )}
             <Button aria-haspopup="menu" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>
               ⋯
             </Button>
             {moreOpen && (
               <div role="menu" className="absolute right-0 top-10 z-30 w-56 rounded-lg border border-slate-200 bg-white p-1 text-sm shadow-lg" onMouseLeave={() => setMoreOpen(false)}>
-                {["Copy link", "Send email", "Export PDF"].map((label) => (
-                  <button key={label} role="menuitem" type="button" disabled title={PHASE3} className="block w-full rounded px-3 py-1.5 text-left text-slate-400">
+                <MenuItem disabled={!isLive} onClick={() => (setMoreOpen(false), void copyLink())}>
+                  {copied ? "Link copied ✓" : "Copy link"}
+                </MenuItem>
+                <MenuItem disabled={!isLive} onClick={() => window.open(publicUrl, "_blank", "noopener")}>
+                  Open client view
+                </MenuItem>
+                {["Send email", "Export PDF"].map((label) => (
+                  <button key={label} role="menuitem" type="button" disabled title={LATER} className="block w-full rounded px-3 py-1.5 text-left text-slate-400">
                     {label}
                   </button>
                 ))}
@@ -162,14 +217,43 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
           </SidebarCard>
         }
       />
+      <Modal open={share !== null} onClose={() => setShare(null)} title="Your proposal is live">
+        <p className="text-sm text-slate-600">Anyone with this link can view it. Send it to your client, or copy it into an email.</p>
+        <div className="mt-4 flex gap-2">
+          <input readOnly aria-label="Proposal link" className={`${inputClass} font-mono text-xs`} value={share ?? ""} onFocus={(e) => e.target.select()} />
+          <Button variant="primary" onClick={() => void copyLink()}>
+            {copied ? "Copied ✓" : "Copy"}
+          </Button>
+        </div>
+        <div className="mt-4 flex justify-between text-sm">
+          <a href={share ?? "#"} target="_blank" rel="noopener" className="font-medium text-brand underline">
+            Open client view
+          </a>
+          <span className="text-slate-500">Version {published.version}</span>
+        </div>
+      </Modal>
+      <Modal open={publishIssues !== null} onClose={() => setPublishIssues(null)} title="Almost ready to publish">
+        <p className="text-sm text-slate-600">Fix these first:</p>
+        <ul className="mt-3 space-y-1.5 text-sm">
+          {publishIssues?.map((m) => (
+            <li key={m} className="flex gap-2">
+              <span aria-hidden className="text-amber-500">•</span>
+              {m}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-5 flex justify-end">
+          <Button onClick={() => setPublishIssues(null)}>OK</Button>
+        </div>
+      </Modal>
       <SaveAsTemplateDialog open={templateOpen} onClose={() => setTemplateOpen(false)} proposalId={proposal.id} defaultName={title} beforeSave={flush} />
     </>
   );
 }
 
-function MenuItem({ onClick, children }: { onClick: () => void; children: string }) {
+function MenuItem({ onClick, children, disabled }: { onClick: () => void; children: string; disabled?: boolean }) {
   return (
-    <button role="menuitem" type="button" onClick={onClick} className="block w-full rounded px-3 py-1.5 text-left hover:bg-slate-100">
+    <button role="menuitem" type="button" onClick={onClick} disabled={disabled} className="block w-full rounded px-3 py-1.5 text-left hover:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-transparent">
       {children}
     </button>
   );

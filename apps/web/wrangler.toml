@@ -1,0 +1,9 @@
+# Cloudflare Pages project for the web app (admin + public viewer + Pages Functions).
+name = "bridger-proposals-web"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-01"
+
+# Lets functions/p/[slug].ts call the API Worker directly.
+[[services]]
+binding = "API"
+service = "bridger-proposals-api"

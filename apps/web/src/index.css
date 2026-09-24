@@ -122,3 +122,21 @@ body {
     background: white;
   }
 }
+
+/* Print view (/p/:slug?print=1): used by the PDF renderer. */
+@page {
+  margin: 16mm 14mm;
+}
+@media print {
+  [data-block-type] {
+    break-inside: avoid;
+  }
+  .proposal-print section,
+  .proposal-print figure {
+    box-shadow: none !important;
+  }
+}
+.proposal-print {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}

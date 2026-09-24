@@ -21,6 +21,7 @@
     "@bridger/shared": "workspace:*",
     "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.63.0",
+    "@supabase/supabase-js": "^2.117.1",
     "@types/node": "^26.6.2",
     "supabase": "^2.117.0",
     "tsx": "^4.23.15",

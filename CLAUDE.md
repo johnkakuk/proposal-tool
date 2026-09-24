@@ -36,6 +36,13 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - Block renderers use **container queries** (`@lg:`, `@2xl:`), not viewport breakpoints, so the mobile preview is accurate.
 - Effects: always use braces (`useEffect(() => { … })`). Newer browsers return a Promise from `scrollIntoView`, which React treats as a cleanup function.
 
+## Publishing & the public viewer
+- **Publish** = `services/publish.ts` → `publish_proposal` RPC (one transaction). It snapshots `{content, pricing}` into `proposal_versions` with a canonical SHA-256 `content_hash`, bumps `current_version`, moves draft → sent, sets expiry (default from settings), and freezes the owner signature into the version. Republishing with no changes is a no-op. The link (slug) never changes.
+- `ProposalDetail.has_unpublished_changes` compares the draft's hash to the current version's hash.
+- **Public API** (`/api/public/*`, no auth) only ever serves `proposal_versions`, never the working draft. Drafts and archived proposals return 404. State is derived: `signed` > `declined` > `expired` (status or past `expires_at`) > `active`. Expired and declined responses carry no document. Never add private fields (notes, decline reason, audit, emails other than the contact address) to public payloads.
+- **Viewer:** `src/public/*`, code-split. It must not import admin pages, TipTap, or the Supabase SDK. `?print=1` is the print/PDF view (no header, no interaction, no tracking).
+- **Link previews:** `apps/web/functions/p/[slug].ts` (Pages Function) injects OG tags via the `API` service binding (`apps/web/wrangler.toml`). Tag building is in `src/lib/ogMeta.ts` (escaped, tested). `public/_headers` is the noindex fallback.
+
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.
 - **To add a block/object type** (a developer task, not a user one):
@@ -65,6 +72,7 @@ pnpm dev             # wrangler dev :8787 + vite :5173 (Vite proxies Worker path
 pnpm db:start        # supabase start (needs Docker)
 pnpm db:reset        # re-run migrations + seeds locally
 pnpm gen:seed
+pnpm --filter @bridger/web pages:dev   # build + wrangler pages dev :8788 (tests the Pages Function; needs the API worker running)
 ```
 Local env: `apps/api/.dev.vars` (from `.dev.vars.example`) and `apps/web/.env.local` (from `.env.example`).
 

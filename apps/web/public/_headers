@@ -1,0 +1,7 @@
+# Cloudflare Pages headers. The /p/* Pages Function sets these too; this is the fallback.
+/p/*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: same-origin
+
+/app/*
+  X-Robots-Tag: noindex, nofollow

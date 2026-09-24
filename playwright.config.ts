@@ -9,6 +9,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,
+  globalTimeout: 10 * 60_000,
   expect: { timeout: 10_000 },
   reporter: [["list"]],
   use: { baseURL: "http://localhost:5173", trace: "retain-on-failure", ...devices["Desktop Chrome"], viewport: { width: 1440, height: 1000 } },

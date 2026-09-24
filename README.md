@@ -13,7 +13,7 @@ Everything runs on free tiers: Cloudflare Pages + Workers, Supabase, and Resend.
 |---|---|---|
 | 1 | Foundation: monorepo, schemas, pricing engine, database, Worker, login | ✅ Done |
 | 2 | Editor, templates, clients | ✅ Done |
-| 3 | Publish & public viewer | — |
+| 3 | Publish & public viewer | ✅ Done |
 | 4 | E-signature | — |
 | 5 | Email | — |
 | 6 | Tracking & analytics | — |

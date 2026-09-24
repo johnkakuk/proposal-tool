@@ -12,13 +12,9 @@ import {
   type TemplateInput,
   type TemplateSummary,
 } from "@bridger/shared";
-import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import { supabase } from "./supabase";
-
-export const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } },
-});
 
 const qs = (params: Record<string, string | undefined>) => {
   const s = new URLSearchParams(Object.entries(params).filter((e): e is [string, string] => Boolean(e[1]))).toString();
