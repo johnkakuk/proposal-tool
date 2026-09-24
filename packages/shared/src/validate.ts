@@ -78,6 +78,22 @@ export function checkPublishable(content: ProposalContent, pricing: Pricing, opt
 
   if (!opts.clientHasEmail) issues.push({ path: "client", message: "The proposal's client needs an email address" });
   if (pricing.sections.length === 0) issues.push({ path: "pricing.sections", message: "Add at least one pricing section" });
+  pricing.sections.forEach((s, i) => {
+    const name = s.title.trim() ? `'${s.title}'` : `#${i + 1}`;
+    if (!s.title.trim()) issues.push({ path: `pricing.sections.${i}.title`, message: `Pricing section ${name} needs a title` });
+    if (s.items.length === 0) issues.push({ path: `pricing.sections.${i}.items`, message: `Pricing section ${name} has no items` });
+    s.items.forEach((item, j) => {
+      if (!item.name.trim()) issues.push({ path: `pricing.sections.${i}.items.${j}.name`, message: `Item ${j + 1} in pricing section ${name} needs a name` });
+      if (item.discount && !item.discount.label.trim())
+        issues.push({ path: `pricing.sections.${i}.items.${j}.discount.label`, message: `The discount on item ${j + 1} in pricing section ${name} needs a label` });
+    });
+    s.discounts.forEach((d, j) => {
+      if (!d.label.trim()) issues.push({ path: `pricing.sections.${i}.discounts.${j}.label`, message: `Discount ${j + 1} in pricing section ${name} needs a label` });
+    });
+  });
+  pricing.discounts.forEach((d, j) => {
+    if (!d.label.trim()) issues.push({ path: `pricing.discounts.${j}.label`, message: `Proposal discount ${j + 1} needs a label` });
+  });
 
   for (const { b, i } of visible) {
     const props = b.props as Record<string, unknown>;

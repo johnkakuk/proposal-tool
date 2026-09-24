@@ -8,7 +8,8 @@ export type Billing = z.infer<typeof BillingSchema>;
 export const DiscountSchema = z
   .object({
     id: DocIdSchema,
-    label: ShortTextSchema.min(1),
+    /** May be empty in drafts; publish validation requires it. */
+    label: ShortTextSchema,
     type: z.enum(["percent", "amount"]),
     /** Percent: 0–100 (up to 2 decimals). Amount: integer cents. */
     value: z.number().min(0),
@@ -28,7 +29,8 @@ export type Discount = z.infer<typeof DiscountSchema>;
 
 export const LineItemSchema = z.object({
   id: DocIdSchema,
-  name: ShortTextSchema.min(1),
+  /** May be empty in drafts; publish validation requires it. */
+  name: ShortTextSchema,
   description: MarkdownSchema.optional(),
   /** May be decimal (e.g. 1.5 hours); at most 2 decimal places. */
   quantity: TwoDecimalSchema.pipe(z.number().min(0).max(1_000_000)),

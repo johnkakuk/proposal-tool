@@ -51,3 +51,21 @@ export function formatCents(cents: number, currency = "USD"): string {
 function assertInt(n: number, name: string): void {
   if (!Number.isSafeInteger(n)) throw new RangeError(`${name} must be a safe integer (got ${n})`);
 }
+
+/**
+ * Parses what a person types into a price field ("1,500", "$1500.5", "12.34") into
+ * integer cents using string math only. Returns null for anything that isn't a
+ * non-negative amount with at most 2 decimal places.
+ */
+export function parseDollarsToCents(input: string): number | null {
+  const s = input.trim().replace(/^\$/, "").replaceAll(",", "").trim();
+  const m = /^(\d*)(?:\.(\d{0,2}))?$/.exec(s);
+  if (!m || (m[1] === "" && (m[2] ?? "") === "")) return null;
+  const cents = Number(m[1] || "0") * 100 + Number((m[2] ?? "").padEnd(2, "0"));
+  return Number.isSafeInteger(cents) && cents <= MAX_CENTS ? cents : null;
+}
+
+/** Cents → plain editable string, e.g. 150000 → "1500.00", 150050 → "1500.50". */
+export function centsToInput(cents: number): string {
+  return `${Math.trunc(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
+}

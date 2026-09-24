@@ -94,7 +94,9 @@ describe("pricing schema", () => {
 });
 
 describe("publish validation", () => {
-  const pricing: Pricing = PricingSchema.parse({ sections: [{ id: "sec_a", title: "A", mode: "fixed", items: [] }] });
+  const pricing: Pricing = PricingSchema.parse({
+    sections: [{ id: "sec_a", title: "A", mode: "fixed", items: [{ id: "i", name: "Item", quantity: 1, unitPriceCents: 100, billing: "one_time" }] }],
+  });
   const block = (id: string, type: keyof typeof blockRegistry, props?: object) =>
     ({ id, type, props: props ?? blockRegistry[type].example }) as ProposalContent["blocks"][number];
   const content = (...blocks: ProposalContent["blocks"]): ProposalContent => ProposalContentSchema.parse({ schemaVersion: 1, blocks });
@@ -159,5 +161,21 @@ describe("ids", () => {
     expect(newBlockId()).toHaveLength(10);
     expect(newSlug()).toMatch(SLUG_RE);
     for (let i = 0; i < 200; i++) expect(newCertificateId()).toMatch(CERTIFICATE_ID_RE);
+  });
+});
+
+describe("publish validation: pricing labels", () => {
+  it("allows blank names in drafts but not at publish", () => {
+    const pricing = PricingSchema.parse({
+      sections: [{ id: "s", title: "", mode: "fixed", items: [{ id: "i", name: "", quantity: 1, unitPriceCents: 1, billing: "one_time" }], discounts: [{ id: "d", label: "", type: "percent", value: 5 }] }],
+      discounts: [{ id: "pd", label: " ", type: "amount", value: 100 }],
+    });
+    const content = ProposalContentSchema.parse({ schemaVersion: 1, blocks: [{ id: "s", type: "signature", props: blockRegistry.signature.example }] });
+    expect(checkPublishable(content, pricing, { clientHasEmail: true }).map((i) => i.message)).toEqual([
+      "Pricing section #1 needs a title",
+      "Item 1 in pricing section #1 needs a name",
+      "Discount 1 in pricing section #1 needs a label",
+      "Proposal discount 1 needs a label",
+    ]);
   });
 });
