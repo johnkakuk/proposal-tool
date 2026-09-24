@@ -58,7 +58,7 @@ export function SectionEditor({ section, onChange, onRemove }: { section: Pricin
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4" data-testid="pricing-section-editor">
-      <div className="grid gap-3 sm:grid-cols-[1fr_16rem_auto]">
+      <div className="grid gap-3 @lg:grid-cols-[1fr_16rem_auto]">
         <TextInput label="Section title" value={section.title} onChange={(title) => onChange({ ...section, title })} />
         <SelectInput label="Type" value={section.mode} options={MODE_OPTIONS} onChange={(mode) => onChange(withMode(section, mode))} />
         <div className="flex items-end">
@@ -69,7 +69,7 @@ export function SectionEditor({ section, onChange, onRemove }: { section: Pricin
       </div>
 
       <div className="mt-4">
-        <div className="hidden grid-cols-[1.5rem_1fr_4.5rem_7rem_7rem_6.5rem_5.5rem] gap-2 px-1 pb-1 text-xs font-medium text-slate-500 md:grid">
+        <div className="hidden grid-cols-[1.5rem_1fr_4.5rem_7rem_7rem_6.5rem_5.5rem] gap-2 px-1 pb-1 text-xs font-medium text-slate-500 @2xl:grid">
           <span title={section.mode === "fixed" ? "" : "Selected by default"}>{section.mode === "fixed" ? "" : "Def."}</span>
           <span>Item</span>
           <span>Qty</span>
@@ -138,7 +138,7 @@ function ItemRow(p: {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50/50 p-2">
-      <div className="grid grid-cols-[1.5rem_1fr] items-center gap-2 md:grid-cols-[1.5rem_1fr_4.5rem_7rem_7rem_6.5rem_5.5rem]">
+      <div className="grid grid-cols-[1.5rem_1fr] items-center gap-2 @2xl:grid-cols-[1.5rem_1fr_4.5rem_7rem_7rem_6.5rem_5.5rem]">
         <span className="flex justify-center">
           {p.mode !== "fixed" && (
             <input
@@ -158,7 +158,7 @@ function ItemRow(p: {
           value={item.name}
           onChange={(e) => p.onChange({ ...item, name: e.target.value })}
         />
-        <div className="col-span-2 grid grid-cols-[4.5rem_1fr_1fr] gap-2 md:contents">
+        <div className="col-span-2 grid grid-cols-[4.5rem_1fr_1fr] gap-2 @2xl:contents">
           <NumberInput compact label="Quantity" value={item.quantity} max={1_000_000} onChange={(quantity) => p.onChange({ ...item, quantity })} />
           <MoneyInput compact label="Unit price" cents={item.unitPriceCents} onChange={(unitPriceCents) => p.onChange({ ...item, unitPriceCents })} />
           <select
@@ -174,8 +174,8 @@ function ItemRow(p: {
             ))}
           </select>
         </div>
-        <span className="hidden text-right text-sm font-semibold tabular-nums md:block">{money(p.total, item.billing)}</span>
-        <div className="col-span-2 flex justify-end md:col-span-1">
+        <span className="hidden text-right text-sm font-semibold tabular-nums @2xl:block">{money(p.total, item.billing)}</span>
+        <div className="col-span-2 flex justify-end @2xl:col-span-1">
           <IconButton label="More options" onClick={() => setOpen(!open)}>
             {open ? "▾" : "⋯"}
           </IconButton>
@@ -191,12 +191,12 @@ function ItemRow(p: {
         </div>
       </div>
       {open && (
-        <div className="mt-2 grid gap-3 border-t border-slate-200 pt-3 sm:grid-cols-2">
+        <div className="mt-2 grid gap-3 border-t border-slate-200 pt-3 @lg:grid-cols-2">
           <TextInput label="Unit label" placeholder="hr, video, month…" value={item.unitLabel} onChange={(v) => p.onChange({ ...item, unitLabel: v || undefined })} />
-          <div className="sm:col-span-2">
+          <div className="@lg:col-span-2">
             <MarkdownInput label="Description" value={item.description} onChange={(v) => p.onChange({ ...item, description: v || undefined })} rows={2} />
           </div>
-          <div className="sm:col-span-2">
+          <div className="@lg:col-span-2">
             {item.discount ? (
               <DiscountFields discount={item.discount} lineLevel onChange={(discount) => p.onChange({ ...item, discount })} onRemove={() => p.onChange({ ...item, discount: undefined })} />
             ) : (
@@ -222,7 +222,7 @@ export function DiscountList({ discounts, onChange }: { discounts: Discount[]; o
 
 export function DiscountFields({ discount, onChange, onRemove, lineLevel }: { discount: Discount; onChange: (d: Discount) => void; onRemove: () => void; lineLevel?: boolean }) {
   return (
-    <div className={`grid items-end gap-2 rounded-md border border-slate-200 bg-white p-2 ${lineLevel ? "sm:grid-cols-[1fr_7rem_7rem_auto]" : "sm:grid-cols-[1fr_7rem_7rem_9rem_auto]"}`}>
+    <div className={`grid items-end gap-2 rounded-md border border-slate-200 bg-white p-2 ${lineLevel ? "@lg:grid-cols-[1fr_7rem_7rem_auto]" : "@lg:grid-cols-[1fr_7rem_7rem_9rem_auto]"}`}>
       <TextInput label="Discount label" placeholder="Returning client discount" value={discount.label} onChange={(label) => onChange({ ...discount, label })} />
       <SelectInput
         label="Type"

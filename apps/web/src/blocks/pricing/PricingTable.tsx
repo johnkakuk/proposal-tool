@@ -42,7 +42,7 @@ function Section({ section, computed, selected, onSelect }: { section: PricingSe
       </header>
 
       {section.mode === "choose_one" ? (
-        <div role="radiogroup" aria-label={section.title} className={`grid gap-3 ${section.items.length >= 3 ? "sm:grid-cols-3" : section.items.length === 2 ? "sm:grid-cols-2" : ""}`}>
+        <div role="radiogroup" aria-label={section.title} className={`grid gap-3 ${section.items.length >= 3 ? "@lg:grid-cols-3" : section.items.length === 2 ? "@lg:grid-cols-2" : ""}`}>
           {computed.lines.map((line, i) => {
             const item = section.items[i]!;
             const on = selected.has(line.itemId);

@@ -108,7 +108,7 @@ export function DocumentWorkspace(p: DocumentWorkspaceProps) {
         <div className="min-w-0 flex-1 bg-slate-100/70 px-4 py-8">
           <RenderProvider value={renderValue} theme={p.brand} overrides={content.theme}>
             <div
-              className={`mx-auto rounded-xl bg-(--color-background) shadow-sm ring-1 ring-slate-200 transition-[max-width] ${device === "mobile" ? "max-w-[390px] px-5 py-8" : "max-w-4xl px-8 py-12 sm:px-14"}`}
+              className={`@container mx-auto rounded-xl bg-(--color-background) shadow-sm ring-1 ring-slate-200 transition-[max-width] ${device === "mobile" ? "max-w-[390px] px-5 py-8" : "max-w-4xl px-8 py-12 sm:px-14"}`}
               data-device={device}
             >
               {/* The editor stays mounted in preview so undo history survives. */}

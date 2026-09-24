@@ -36,7 +36,7 @@ export function RenderProvider({ value, theme, overrides, children }: { value: R
  */
 export function ProposalBlocks({ content }: { content: ProposalContent }) {
   return (
-    <div className="space-y-8">
+    <div className="@container space-y-8">
       {content.blocks
         .filter((b) => !b.hidden)
         .map((b) => {

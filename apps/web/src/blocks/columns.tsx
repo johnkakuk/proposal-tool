@@ -6,7 +6,7 @@ export const columns: BlockUI<"columns"> = {
   type: "columns",
   menu: { description: "2 or 3 side-by-side columns", icon: "▥", keywords: ["side by side", "compare", "grid"], group: "Layout" },
   Renderer: ({ props }) => (
-    <div className={`grid gap-6 ${props.columns.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+    <div className={`grid gap-6 ${props.columns.length === 3 ? "@lg:grid-cols-3" : "@lg:grid-cols-2"}`}>
       {props.columns.map((c, i) => (
         <div key={i}>
           {c.imageUrl && <img src={c.imageUrl} alt="" className="mb-3 w-full rounded-lg" />}

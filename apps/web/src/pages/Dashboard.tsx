@@ -22,9 +22,9 @@ export function Dashboard() {
         </Button>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2 [&>*]:w-auto">
         <input aria-label="Search proposals" placeholder="Search by title…" className={`${inputClass} max-w-xs`} value={q} onChange={(e) => setQ(e.target.value)} />
-        <select aria-label="Filter by status" className={`${inputClass} w-44`} value={status} onChange={(e) => setStatus(e.target.value as ProposalStatus | "")}>
+        <select aria-label="Filter by status" className={`${inputClass} max-w-44`} value={status} onChange={(e) => setStatus(e.target.value as ProposalStatus | "")}>
           <option value="">All active</option>
           {PROPOSAL_STATUSES.map((s) => (
             <option key={s} value={s} className="capitalize">

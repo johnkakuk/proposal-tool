@@ -207,5 +207,5 @@ export function ListEditor<T>(p: {
 }
 
 export function EditorGrid({ children }: { children: ReactNode }) {
-  return <div className="grid gap-3 sm:grid-cols-2">{children}</div>;
+  return <div className="grid gap-3 @lg:grid-cols-2">{children}</div>;
 }

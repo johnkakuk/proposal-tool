@@ -7,12 +7,12 @@ export const cover: BlockUI<"cover"> = {
   menu: { description: "Title page with the client's name", icon: "🏁", keywords: ["title", "hero", "front page"], group: "Layout" },
   Renderer: ({ props }) => (
     <section
-      className="relative overflow-hidden rounded-xl bg-(--color-primary) bg-cover bg-center px-8 py-16 text-white sm:px-12 sm:py-24"
+      className="relative overflow-hidden rounded-xl bg-(--color-primary) bg-cover bg-center px-8 py-16 text-white @lg:px-12 @lg:py-24"
       style={props.backgroundImageUrl ? { backgroundImage: `linear-gradient(rgb(0 0 0 / .55), rgb(0 0 0 / .55)), url("${props.backgroundImageUrl}")` } : undefined}
     >
       {props.clientLogoUrl && <img src={props.clientLogoUrl} alt="" className="mb-10 h-12 w-auto object-contain" />}
       <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-(--color-accent)">Proposal{props.clientName ? ` for ${props.clientName}` : ""}</p>
-      <h1 className="font-(family-name:--font-heading) text-4xl leading-tight font-bold sm:text-5xl">{props.title || "Untitled proposal"}</h1>
+      <h1 className="font-(family-name:--font-heading) text-4xl leading-tight font-bold @lg:text-5xl">{props.title || "Untitled proposal"}</h1>
       {props.subtitle && <p className="mt-4 max-w-2xl text-lg text-white/80">{props.subtitle}</p>}
       <div className="mt-12 flex flex-wrap gap-x-10 gap-y-2 text-sm text-white/70">
         {props.preparedBy && <span>Prepared by {props.preparedBy}</span>}

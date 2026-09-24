@@ -75,7 +75,7 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
         onRetrySave={conflict ? () => window.location.reload() : () => void flush()}
         brand={brand}
         ownerSignatureName={ownerSignatureName}
-        publishCheck={{ clientHasEmail: Boolean(client?.email) }}
+        publishCheck={locked ? undefined : { clientHasEmail: Boolean(client?.email) }}
         heading={
           <>
             <Link to="/app" className="shrink-0 rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 hover:text-ink" aria-label="Back to proposals">

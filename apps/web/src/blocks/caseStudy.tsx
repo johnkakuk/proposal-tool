@@ -8,10 +8,10 @@ export const case_study: BlockUI<"case_study"> = {
   Renderer: ({ props }) => (
     <article className="overflow-hidden rounded-xl border border-black/10">
       {props.imageUrl && <img src={props.imageUrl} alt="" className="max-h-72 w-full object-cover" />}
-      <div className="p-6 sm:p-8">
+      <div className="p-6 @lg:p-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-(--color-accent)">Case study · {props.client}</p>
         <h3 className="mt-1 font-(family-name:--font-heading) text-2xl font-bold">{props.title}</h3>
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
+        <div className="mt-6 grid gap-6 @lg:grid-cols-2">
           <div>
             <h4 className="mb-1 font-semibold">The challenge</h4>
             <Markdown>{props.challenge}</Markdown>
@@ -22,7 +22,7 @@ export const case_study: BlockUI<"case_study"> = {
           </div>
         </div>
         {props.results.length > 0 && (
-          <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+          <ul className="mt-6 grid gap-2 @lg:grid-cols-2">
             {props.results.map((r, i) => (
               <li key={i} className="rounded-md bg-(--color-accent)/10 px-3 py-2 font-medium">
                 {r}

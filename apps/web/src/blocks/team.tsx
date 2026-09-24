@@ -5,7 +5,7 @@ export const team: BlockUI<"team"> = {
   type: "team",
   menu: { description: "The people on the project", icon: "👥", keywords: ["people", "crew", "staff", "bios"], group: "Content" },
   Renderer: ({ props }) => (
-    <div className="grid gap-6 sm:grid-cols-3">
+    <div className="grid gap-6 @lg:grid-cols-3">
       {props.members.map((m, i) => (
         <div key={i} className="text-center">
           {m.photoUrl ? <img src={m.photoUrl} alt={m.name} className="mx-auto size-28 rounded-full object-cover" /> : <div className="mx-auto size-28 rounded-full bg-slate-200" />}

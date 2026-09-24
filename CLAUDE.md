@@ -22,14 +22,27 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 `@bridger/shared` is source-only (`exports` points at `src/index.ts`). Vite, Wrangler, and Vitest bundle it directly, with no build step.
 
 ## Data access model
-- **Browser:** anon key + John's JWT, limited by RLS to `owner_id = auth.uid()`. It reads everything it owns. It writes directly only to `settings`, `clients`, and `templates`.
-- **Worker:** all other writes (proposals, versions, signatures, audit, API keys, email log, analytics) go through `apps/api/src/services/*` with the service role. REST, MCP, and admin actions share these services, so no logic is duplicated.
+- **Browser:** anon key + John's JWT, limited by RLS to `owner_id = auth.uid()`. It reads settings directly. All writes (proposals, templates, clients) go through the Worker's `/api/v1/*` with the JWT in `Authorization: Bearer`. The only exception is settings, which the Settings screen (Phase 8) may write directly.
+- **Worker:** `middleware/auth.ts` verifies Supabase JWTs (JWKS for ES256/RS256; HS256 via `SUPABASE_JWT_SECRET` on legacy projects). Routes validate input with shared Zod schemas (`schemas/api.ts`), then call `apps/api/src/services/*` with a `ServiceContext`. Services use the service role, so **every query must filter by `ownerId`**. REST, MCP, and admin actions share these services, so no logic is duplicated.
+- **Autosave** sends `baseUpdatedAt`. The server rejects stale writes with 409 `conflict` and signed proposals with 409 `locked`. `edited` audit events are coalesced to one per 15 minutes.
 - **anon role:** no table access. The public viewer only talks to the Worker.
 - **Immutable tables:** `proposal_versions`, `audit_events`. `signatures` is immutable except for `pdf_path`/`pdf_hash`, which can be set **once** (from NULL) by the background PDF job. A signed proposal can only toggle `status` between `signed` and `archived`. The lock is keyed on `signed_at`, so archiving doesn't unlock it.
 
+## Editor (apps/web)
+- Writing is Markdown-style prose in TipTap (`editor/prose.ts`: the limited subset only). Everything else is an **object** inserted with `/`. Objects all use one generic node (`proposalObject`) with attrs `{blockId, blockType, props, hidden, aux}`.
+- `editor/convert.ts` maps stored blocks to and from the editor doc, losslessly (tested). A run of prose becomes one `text` block whose ID is on the run's first node. Headings become `heading` blocks. Hidden prose stays an object.
+- **Pricing tables own their sections** in `aux.sections`, so pricing edits are undoable. On save, sections are collected into `pricing.sections`. Proposal-level discounts, tax, and notes live in the sidebar (outside undo).
+- `extensions/blockIds.ts` keeps top-level block IDs present and unique. Copies get new IDs plus the block type's `onDuplicate`.
+- Block renderers use **container queries** (`@lg:`, `@2xl:`), not viewport breakpoints, so the mobile preview is accurate.
+- Effects: always use braces (`useEffect(() => { … })`). Newer browsers return a Promise from `scrollIntoView`, which React treats as a cleanup function.
+
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.
-- **To add a block type:** props schema in `packages/shared/src/blocks/definitions.ts` → entry in `blocks/registry.ts` (label, AI-facing description, defaults, example, requiredProps) → add it to the `BlockSchema` union → Editor/Renderer in `apps/web/src/blocks/registry.tsx`.
+- **To add a block/object type** (a developer task, not a user one):
+  1. `packages/shared/src/blocks/definitions.ts`: props schema
+  2. `packages/shared/src/blocks/registry.ts`: entry (label, AI-facing description, defaults, example, requiredProps) + add to the `BlockSchema` union
+  3. `apps/web/src/blocks/<type>.tsx`: a `BlockUI` (slash-menu entry, `Renderer`, `Editor` built from `fields.tsx`; optional `singleton`, `create`, `onDuplicate`)
+  4. Register it in `apps/web/src/blocks/index.ts`. The `BlockUIRegistry` type fails until every shared type has UI. It then appears in the `/` menu automatically.
 - Validation messages name blocks by position and type ("Block 3 (pricing) references unknown pricing section 'sec_retainer'"), so an AI author can fix its own mistakes. Use `zodIssues()` and `checkPublishable()`.
 - Starter templates use `{{client_name}}` and `{{default_terms}}` placeholders, which are substituted when a proposal is created from a template.
 
@@ -44,7 +57,9 @@ line subtotal `round(qty × unit)` → line discount → section subtotal per ca
 ## Commands (Node 22: `nvm use`)
 ```
 pnpm install
-pnpm test            # vitest: shared, api, db (PGlite, no Docker needed)
+pnpm test            # vitest: shared, web, api, db (PGlite, no Docker needed)
+pnpm test:integration  # Worker routes against local Supabase (needs pnpm db:start)
+pnpm test:e2e        # Playwright against the full local stack
 pnpm typecheck
 pnpm dev             # wrangler dev :8787 + vite :5173 (Vite proxies Worker paths → single origin)
 pnpm db:start        # supabase start (needs Docker)
@@ -56,4 +71,5 @@ Local env: `apps/api/.dev.vars` (from `.dev.vars.example`) and `apps/web/.env.lo
 ## Testing
 - Pricing changes need unit tests in `packages/shared/test/pricing.test.ts`.
 - DB behavior (triggers, RLS, grants) is tested in `supabase/tests` against the real migrations on PGlite, with a thin Supabase shim (`harness.ts`). Run `supabase db reset` against the real stack before deploying migrations.
-- Worker routes are tested with `createApp().request(path, init, env)`.
+- Worker routes are tested with `createApp().request(path, init, env)`. Unit tests live in `apps/api/test`; integration tests in `apps/api/test/integration`.
+- Pricing names, section titles, and discount labels may be blank in drafts; `checkPublishable` requires them.

@@ -12,7 +12,7 @@ Everything runs on free tiers: Cloudflare Pages + Workers, Supabase, and Resend.
 | Phase | Scope | State |
 |---|---|---|
 | 1 | Foundation: monorepo, schemas, pricing engine, database, Worker, login | ✅ Done |
-| 2 | Editor, templates, clients | 🚧 In progress |
+| 2 | Editor, templates, clients | ✅ Done |
 | 3 | Publish & public viewer | — |
 | 4 | E-signature | — |
 | 5 | Email | — |
@@ -42,6 +42,10 @@ pnpm dev                          # Worker on :8787, app on http://localhost:517
 
 Local login: `owner@bridger.local` / `bridger-dev-password`. Magic-link emails land in Mailpit at http://127.0.0.1:54324.
 
+## Writing proposals
+
+Type into the document the way you'd write Markdown: `## ` makes a heading, `- ` a list, `**bold**`, `> ` a quote. Type `/` to insert an object: a pricing table, deliverables, timeline, testimonial, case study, FAQ, terms, a call to action, the signature block, and more. Use ↑/↓ and Enter to pick from the menu. Click an object (or select it and press Enter) to edit it in place, and press Esc when done. Changes autosave.
+
 ## Scripts
 
 | Command | What it does |
@@ -49,6 +53,7 @@ Local login: `owner@bridger.local` / `bridger-dev-password`. Magic-link emails l
 | `pnpm dev` | Runs the Worker and the Vite dev server together. Vite proxies `/api`, `/mcp`, `/oauth`, `/.well-known`, and `/t` to the Worker, so the app runs on one origin. |
 | `pnpm test` | Runs all unit and database tests. The database tests use PGlite and don't need Docker. |
 | `pnpm test:integration` | Runs Worker API tests against the local Supabase stack. |
+| `pnpm test:e2e` | Runs Playwright browser tests against the full local stack (starts the dev servers if they aren't running). |
 | `pnpm typecheck` | Type-checks every package. |
 | `pnpm db:start` / `pnpm db:reset` | Starts local Supabase / re-applies migrations and seeds. |
 | `pnpm gen:seed` | Regenerates the starter-template seed from `scripts/starter-templates.ts`. |

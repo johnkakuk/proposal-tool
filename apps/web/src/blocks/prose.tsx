@@ -30,7 +30,7 @@ export const heading: BlockUI<"heading"> = {
     );
   },
   Editor: ({ props, onChange }) => (
-    <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+    <div className="grid gap-3 @lg:grid-cols-[1fr_8rem]">
       <TextInput label="Heading" value={props.text} onChange={(text) => onChange({ ...props, text })} />
       <SelectInput
         label="Level"

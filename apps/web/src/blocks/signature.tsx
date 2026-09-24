@@ -6,10 +6,10 @@ import type { BlockUI } from "./types";
 function SignatureRenderer({ props }: { props: { intro: string; showOwnerSignature: boolean } }) {
   const { ownerSignatureName } = useRenderContext();
   return (
-    <section className="rounded-xl border-2 border-(--color-primary)/15 p-6 sm:p-8">
+    <section className="rounded-xl border-2 border-(--color-primary)/15 p-6 @lg:p-8">
       <h2 className="proposal-h2 !mt-0">Accept this proposal</h2>
       {props.intro && <Markdown>{props.intro}</Markdown>}
-      <div className={`mt-8 grid gap-8 ${props.showOwnerSignature ? "sm:grid-cols-2" : ""}`}>
+      <div className={`mt-8 grid gap-8 ${props.showOwnerSignature ? "@lg:grid-cols-2" : ""}`}>
         <div>
           {/* Phase 4 replaces this with the signing flow. */}
           <div className="flex h-16 items-end border-b border-black/30 pb-1 text-sm opacity-40">Client signature</div>
