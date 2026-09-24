@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import type { AppEnv } from "./env.js";
 import { ApiError } from "./lib/errors.js";
 import { health } from "./routes/health.js";
+import { v1 } from "./routes/v1/index.js";
 
 /**
  * Routes on proposals.bridgerdigital.com that reach the Worker (SPEC §2):
@@ -16,6 +17,7 @@ export function createApp() {
   const app = new Hono<AppEnv>();
 
   app.route("/api/health", health);
+  app.route("/api/v1", v1);
 
   app.notFound((c) => c.json({ error: { code: "not_found", message: `No route for ${c.req.method} ${c.req.path}` } }, 404));
 

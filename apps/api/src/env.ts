@@ -1,3 +1,5 @@
+import type { AuditActor } from "@bridger/shared";
+
 /** Worker bindings and secrets (SPEC §2). Secrets are set with `wrangler secret put`. */
 export interface Env {
   // Secrets
@@ -23,4 +25,10 @@ export const REQUIRED_SECRETS = [
   "TRACKING_SALT",
 ] as const satisfies readonly (keyof Env)[];
 
-export type AppEnv = { Bindings: Env };
+/** Set by auth middleware on authenticated routes. */
+export interface AuthVariables {
+  ownerId: string;
+  actor: AuditActor;
+}
+
+export type AppEnv = { Bindings: Env; Variables: AuthVariables };

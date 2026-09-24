@@ -7,12 +7,14 @@
     "dev": "wrangler dev --port 8787",
     "deploy": "wrangler deploy",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@bridger/shared": "workspace:*",
     "@supabase/supabase-js": "^2.117.1",
     "hono": "^4.13.8",
+    "jose": "^6.2.12",
     "zod": "^4.6.5"
   },
   "devDependencies": {

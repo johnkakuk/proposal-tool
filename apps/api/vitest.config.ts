@@ -1,5 +1,6 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
-  test: { name: "api", include: ["test/**/*.test.ts"] },
+  // Integration tests need local Supabase: `pnpm test:integration`.
+  test: { name: "api", include: ["test/**/*.test.ts"], exclude: [...configDefaults.exclude, "test/integration/**"] },
 });

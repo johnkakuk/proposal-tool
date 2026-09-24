@@ -13,7 +13,8 @@
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
     "gen:seed": "tsx scripts/gen-seed-templates.ts",
     "db:start": "supabase start",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "test:integration": "pnpm --filter @bridger/api test:integration"
   },
   "devDependencies": {
     "@bridger/shared": "workspace:*",

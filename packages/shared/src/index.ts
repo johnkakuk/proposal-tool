@@ -11,3 +11,6 @@ export * from "./blocks/registry.js";
 export * from "./pricing.js";
 export * from "./validate.js";
 export * from "./json-schema.js";
+export * from "./schemas/api.js";
+export * from "./types.js";
+export * from "./template-vars.js";
