@@ -15,7 +15,8 @@ export function env(): Env {
     TRACKING_SALT: "salt",
     APP_URL: "http://localhost:5173",
     OWNER_EMAIL: "owner@bridger.local",
-  } as Env;
+    RATE_KV: memoryKv(),
+  } as unknown as Env;
 }
 
 export async function ownerToken(): Promise<string> {
@@ -39,4 +40,21 @@ export function api(token: string | null) {
     const text = await res.text();
     return { status: res.status, body: (text ? JSON.parse(text) : null) as T };
   };
+}
+
+/** Minimal in-memory stand-in for a KV namespace (get/put only). */
+export function memoryKv() {
+  const m = new Map<string, string>();
+  return { get: async (k: string) => m.get(k) ?? null, put: async (k: string, v: string) => void m.set(k, v) };
+}
+
+/** Calls a public (unauthenticated) endpoint. */
+export async function publicApi<T = unknown>(method: string, path: string, json?: unknown, e: Env = env()): Promise<{ status: number; body: T; headers: Headers }> {
+  const res = await createApp().request(
+    `/api/public${path}`,
+    { method, headers: json === undefined ? {} : { "Content-Type": "application/json" }, body: json === undefined ? undefined : JSON.stringify(json) },
+    e,
+  );
+  const text = await res.text();
+  return { status: res.status, body: (text ? JSON.parse(text) : null) as T, headers: res.headers };
 }

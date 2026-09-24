@@ -18,6 +18,8 @@ import { requireOwner } from "../../middleware/auth.js";
 import * as clients from "../../services/clients.js";
 import type { ServiceContext } from "../../services/context.js";
 import * as proposals from "../../services/proposals.js";
+import { publishProposal } from "../../services/publish.js";
+import { audit } from "../../services/audit.js";
 import * as templates from "../../services/templates.js";
 
 /**
@@ -47,6 +49,15 @@ export const v1 = new Hono<AppEnv>()
   .get("/proposals/:id", async (c) => c.json(await proposals.getProposal(ctx(c), id(c))))
   .patch("/proposals/:id", async (c) => c.json(await proposals.updateProposal(ctx(c), id(c), await body(c, UpdateProposalSchema))))
   .post("/proposals/:id/duplicate", async (c) => c.json(await proposals.duplicateProposal(ctx(c), id(c), await body(c, DuplicateProposalSchema)), 201))
+  .post("/proposals/:id/publish", async (c) => c.json(await publishProposal(ctx(c), id(c), c.env.APP_URL)))
+  // Owner-side events worth auditing that don't change data (SPEC §6.1).
+  .post("/proposals/:id/events", async (c) => {
+    const { type } = await body(c, z.object({ type: z.enum(["link_copied"]) }));
+    const proposalId = id(c);
+    await proposals.getProposal(ctx(c), proposalId); // ownership check
+    await audit(ctx(c), proposalId, type);
+    return c.body(null, 204);
+  })
   .post("/proposals/:id/archive", async (c) => c.json(await proposals.archiveProposal(ctx(c), id(c))))
   .post("/proposals/:id/save-as-template", async (c) =>
     c.json(await proposals.saveProposalAsTemplate(ctx(c), id(c), await body(c, SaveAsTemplateSchema)), 201),

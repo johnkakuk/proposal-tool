@@ -2,6 +2,8 @@ import type { PricingResult } from "./pricing.js";
 import type { ProposalContent } from "./schemas/content.js";
 import type { CreatedVia, ProposalStatus } from "./schemas/db.js";
 import type { Pricing } from "./schemas/pricing.js";
+import type { OwnerSignature } from "./schemas/settings.js";
+import type { CompanyInfo, Theme } from "./schemas/theme.js";
 
 /** API response shapes for /api/v1/*. Column names follow the database (snake_case). */
 
@@ -45,6 +47,10 @@ export interface ProposalDetail extends ProposalSummary {
   created_via_client: string | null;
   /** Totals from default selections, recomputed server-side. Null if pricing can't be computed. */
   totals: PricingResult | null;
+  /** True when the draft differs from the latest published version (or it was never published). */
+  has_unpublished_changes: boolean;
+  /** When the current version was published; null if never. */
+  published_at: string | null;
 }
 
 export interface TemplateSummary {
@@ -68,4 +74,26 @@ export interface ClientDetail extends ClientRow {
 
 export interface ApiErrorBody {
   error: { code: string; message: string; issues?: { path: string; message: string }[] };
+}
+
+/** What the client sees (SPEC §8.1). Drafts and archived proposals are never returned (404). */
+export type PublicProposalState = "active" | "expired" | "declined" | "signed";
+
+export interface PublicProposal {
+  state: PublicProposalState;
+  slug: string;
+  title: string;
+  version: number;
+  clientName: string | null;
+  expiresAt: string | null;
+  brand: { theme: Theme | null; company: CompanyInfo | null; contactEmail: string };
+  /** Present for active and signed proposals only. */
+  document: { content: ProposalContent; pricing: Pricing; ownerSignature: OwnerSignature | null } | null;
+}
+
+/** Minimal metadata for link previews (Open Graph), fetched by the Pages Function. */
+export interface PublicProposalMeta {
+  title: string;
+  description: string;
+  imageUrl: string | null;
 }

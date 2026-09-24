@@ -1,4 +1,4 @@
-import { BrandSchema, OwnerSignatureSchema, type Brand } from "@bridger/shared";
+import { BrandSchema, OwnerSignatureSchema, type Brand, type OwnerSignature } from "@bridger/shared";
 import { found, type ServiceContext } from "./context.js";
 
 export interface OwnerSettings {
@@ -8,6 +8,7 @@ export interface OwnerSettings {
   timezone: string;
   /** Default "Prepared by" on new covers: owner signature name, else company name. */
   preparedBy: string;
+  ownerSignature: OwnerSignature | null;
 }
 
 export async function getSettings(ctx: ServiceContext): Promise<OwnerSettings> {
@@ -28,5 +29,6 @@ export async function getSettings(ctx: ServiceContext): Promise<OwnerSettings> {
     default_expiry_days: row.default_expiry_days,
     timezone: row.timezone,
     preparedBy: sig.success ? sig.data.name : brand.success ? brand.data.company.name : "",
+    ownerSignature: sig.success ? sig.data : null,
   };
 }

@@ -28,6 +28,8 @@ export function must<T>(res: PgResult<T>, what: string): T {
   if (res.error) {
     // P0001 = raised by our immutability triggers: surface as a conflict, not a crash.
     if (res.error.code === "P0001") throw new ApiError(409, "locked", res.error.message);
+    if (res.error.code === "40001") throw new ApiError(409, "conflict", res.error.message);
+    if (res.error.code === "P0002") throw new ApiError(404, "not_found", res.error.message);
     console.error(`DB error (${what})`, res.error);
     throw new ApiError(500, "db_error", `Database error while trying to ${what}`);
   }

@@ -238,3 +238,55 @@ describe("RLS and grants", () => {
     );
   });
 });
+
+describe("publish_proposal", () => {
+  const publish = async (id: string, expectedUpdatedAt?: string, expiresAt = new Date(Date.now() + 86_400_000).toISOString()) => {
+    const updated = expectedUpdatedAt ?? (await db.query<{ u: string }>(`select updated_at::text as u from public.proposals where id = $1`, [id])).rows[0]!.u;
+    const { rows } = await db.query<{ v: number }>(`select public.publish_proposal($1, $2, $3::timestamptz, $4, null, $5::timestamptz, 'owner', null, null) as v`, [id, owner, updated, HASH, expiresAt]);
+    return rows[0]!.v;
+  };
+  const row = async (id: string) =>
+    (await db.query<{ status: string; current_version: number; sent_at: string | null }>(`select status, current_version, sent_at from public.proposals where id = $1`, [id])).rows[0]!;
+
+  it("snapshots a version, bumps current_version, and moves draft → sent", async () => {
+    const id = await insertProposal(owner);
+    expect(await publish(id)).toBe(1);
+    expect(await row(id)).toMatchObject({ status: "sent", current_version: 1 });
+    expect((await row(id)).sent_at).not.toBeNull();
+    await db.query(`update public.proposals set title = 'Edited', status = 'viewed' where id = $1`, [id]);
+    expect(await publish(id)).toBe(2);
+    expect(await row(id)).toMatchObject({ status: "viewed", current_version: 2 });
+    const events = await db.query<{ event_type: string }>(`select event_type from public.audit_events where proposal_id = $1 order by occurred_at`, [id]);
+    expect(events.rows.map((e) => e.event_type)).toEqual(["published", "published"]);
+  });
+
+  it("republishing an expired proposal with a new date extends it", async () => {
+    const id = await insertProposal(owner);
+    await publish(id);
+    await db.query(`update public.proposals set status = 'expired' where id = $1`, [id]);
+    await publish(id);
+    expect((await row(id)).status).toBe("sent");
+    const events = await db.query<{ event_type: string }>(`select event_type from public.audit_events where proposal_id = $1 order by occurred_at, event_type`, [id]);
+    expect(events.rows.map((e) => e.event_type)).toContain("extended");
+  });
+
+  it("rejects stale callers, past expiry, and signed or archived proposals, leaving no stray versions", async () => {
+    const id = await insertProposal(owner);
+    await rejects(publish(id, "2000-01-01T00:00:00Z"), /changed while publishing/);
+    await rejects(publish(id, undefined, "2000-01-01T00:00:00Z"), /must be in the future/);
+    const signed = await signedProposal();
+    await rejects(publish(signed), /can't be published/);
+    const archived = await insertProposal(owner, "archived");
+    await rejects(publish(archived), /can't be published/);
+    const { rows } = await db.query<{ n: number }>(`select count(*)::int as n from public.proposal_versions where proposal_id = $1`, [id]);
+    expect(rows[0]!.n).toBe(0);
+  });
+
+  it("isn't callable by the browser roles", async () => {
+    const id = await insertProposal(owner);
+    await rejects(
+      asRole(db, "authenticated", owner, (tx) => tx.query(`select public.publish_proposal($1, $2, now(), $3, null, now() + interval '1 day', 'owner', null, null)`, [id, owner, HASH])),
+      /permission denied/,
+    );
+  });
+});

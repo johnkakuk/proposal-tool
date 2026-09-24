@@ -21,3 +21,8 @@ export async function sha256Hex(data: string | Uint8Array): Promise<string> {
 export async function hashCanonical(value: unknown): Promise<string> {
   return sha256Hex(canonicalJson(value));
 }
+
+/** The hash stored on proposal_versions: canonical {content, pricing}. */
+export async function documentHash(doc: { content: unknown; pricing: unknown }): Promise<string> {
+  return hashCanonical({ content: doc.content, pricing: doc.pricing });
+}

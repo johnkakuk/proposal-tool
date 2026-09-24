@@ -9,6 +9,7 @@ import {
   applyTemplateVars,
   blankContent,
   checkReferences,
+  documentHash,
   emptyPricing,
   newSlug,
   tryComputePricing,
@@ -29,8 +30,6 @@ export const SUMMARY_COLUMNS =
   "id, slug, title, status, total_one_time_cents, total_monthly_cents, current_version, expires_at, sent_at, last_viewed_at, signed_at, created_via, created_at, updated_at, client:clients(id, name, company)";
 const DETAIL_COLUMNS = `${SUMMARY_COLUMNS}, client_id, content, pricing, template_id, revision_of, created_via_client`;
 
-type DetailRow = Omit<ProposalDetail, "totals">;
-
 /**
  * Validates a document pair beyond what Zod checks: cross-references and that
  * default selections price cleanly. Throws 422 with model-readable issues.
@@ -48,10 +47,26 @@ function denormalizedTotals(pricing: Pricing) {
   return r.ok ? { total_one_time_cents: r.result.total.one_time, total_monthly_cents: r.result.total.monthly } : { total_one_time_cents: 0, total_monthly_cents: 0 };
 }
 
-function toDetail(row: DetailRow): ProposalDetail {
+/** A proposal row as selected with DETAIL_COLUMNS, before computed fields are added. */
+type DetailRow = Omit<ProposalDetail, "totals" | "has_unpublished_changes" | "published_at">;
+
+async function toDetail(ctx: ServiceContext, row: DetailRow): Promise<ProposalDetail> {
   const parsed = PricingSchema.safeParse(row.pricing);
   const priced = parsed.success ? tryComputePricing(parsed.data) : null;
-  return { ...row, totals: priced?.ok ? priced.result : null };
+  let published: { content_hash: string; created_at: string } | null = null;
+  if (row.current_version > 0) {
+    published = must(
+      await ctx.db.from("proposal_versions").select("content_hash, created_at").eq("proposal_id", row.id).eq("version", row.current_version).maybeSingle(),
+      "load the published version",
+    ) as { content_hash: string; created_at: string } | null;
+  }
+  const hash = await documentHash({ content: row.content, pricing: row.pricing });
+  return {
+    ...row,
+    totals: priced?.ok ? priced.result : null,
+    has_unpublished_changes: published?.content_hash !== hash,
+    published_at: published?.created_at ?? null,
+  };
 }
 
 const LOCKED_MESSAGE = "This proposal is signed and locked. Duplicate it as a new revision to make changes.";
@@ -70,7 +85,7 @@ export async function getProposal(ctx: ServiceContext, id: string): Promise<Prop
     "load the proposal",
     "Proposal",
   ) as unknown as DetailRow;
-  return toDetail(row);
+  return toDetail(ctx, row);
 }
 
 export async function createProposal(ctx: ServiceContext, input: z.output<typeof CreateProposalSchema>): Promise<ProposalDetail> {
@@ -116,15 +131,15 @@ export async function createProposal(ctx: ServiceContext, input: z.output<typeof
     "create the proposal",
   ) as unknown as DetailRow;
   await audit(ctx, row.id, "created", { via: row.created_via, templateId: input.templateId ?? null });
-  return toDetail(row);
+  return toDetail(ctx, row);
 }
 
 export async function updateProposal(ctx: ServiceContext, id: string, input: z.output<typeof UpdateProposalSchema>): Promise<ProposalDetail> {
   const current = found(
-    await ctx.db.from("proposals").select("id, status, signed_at, updated_at, content, pricing").eq("owner_id", ctx.ownerId).eq("id", id).maybeSingle(),
+    await ctx.db.from("proposals").select("id, status, signed_at, first_viewed_at, updated_at, content, pricing").eq("owner_id", ctx.ownerId).eq("id", id).maybeSingle(),
     "load the proposal",
     "Proposal",
-  ) as { id: string; status: string; signed_at: string | null; updated_at: string; content: ProposalContent; pricing: Pricing };
+  ) as { id: string; status: string; signed_at: string | null; first_viewed_at: string | null; updated_at: string; content: ProposalContent; pricing: Pricing };
 
   if (current.signed_at) throw new ApiError(409, "locked", LOCKED_MESSAGE);
   if (current.status === "archived") throw new ApiError(409, "archived", "This proposal is archived. Unarchive it before editing.");
@@ -136,7 +151,16 @@ export async function updateProposal(ctx: ServiceContext, id: string, input: z.o
   const patch: Record<string, unknown> = {};
   if (input.title !== undefined) patch.title = input.title;
   if (input.clientId !== undefined) patch.client_id = input.clientId;
-  if (input.expiresAt !== undefined) patch.expires_at = input.expiresAt;
+  if (input.expiresAt !== undefined) {
+    if (input.expiresAt && current.status !== "draft" && Date.parse(input.expiresAt) <= Date.now()) {
+      throw new ApiError(422, "invalid_input", "The expiry date must be in the future");
+    }
+    patch.expires_at = input.expiresAt;
+    // Extending an expired proposal reopens it (SPEC §4).
+    if (current.status === "expired" && input.expiresAt && Date.parse(input.expiresAt) > Date.now()) {
+      patch.status = current.first_viewed_at ? "viewed" : "sent";
+    }
+  }
   if (input.content !== undefined || input.pricing !== undefined) {
     const content = input.content ?? ProposalContentSchema.parse(current.content);
     const pricing = input.pricing ?? PricingSchema.parse(current.pricing);
@@ -153,8 +177,9 @@ export async function updateProposal(ctx: ServiceContext, id: string, input: z.o
     "save the proposal",
   ) as unknown as DetailRow | null;
   if (!row) throw new ApiError(409, "conflict", "This proposal was changed somewhere else. Reload to get the latest version.");
-  await auditEdited(ctx, id, Object.keys(patch).filter((k) => !k.startsWith("total_")));
-  return toDetail(row);
+  if (patch.status) await audit(ctx, id, "extended", { expiresAt: patch.expires_at });
+  await auditEdited(ctx, id, Object.keys(patch).filter((k) => !k.startsWith("total_") && k !== "status"));
+  return toDetail(ctx, row);
 }
 
 export async function duplicateProposal(ctx: ServiceContext, id: string, input: z.output<typeof DuplicateProposalSchema>): Promise<ProposalDetail> {
@@ -184,7 +209,7 @@ export async function duplicateProposal(ctx: ServiceContext, id: string, input: 
   ) as unknown as DetailRow;
   await audit(ctx, source.id, "duplicated", { newProposalId: row.id, asRevision: input.asRevision });
   await audit(ctx, row.id, "created", { via: ctx.createdVia, duplicatedFrom: source.id, asRevision: input.asRevision });
-  return toDetail(row);
+  return toDetail(ctx, row);
 }
 
 export async function archiveProposal(ctx: ServiceContext, id: string): Promise<ProposalDetail> {
