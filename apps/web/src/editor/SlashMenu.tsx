@@ -14,8 +14,14 @@ export const SlashMenu = forwardRef<SlashMenuHandle, { items: SlashItem[]; comma
   const listRef = useRef<HTMLDivElement>(null);
   const enabled = items.map((it, i) => (it.disabledReason ? -1 : i)).filter((i) => i >= 0);
 
-  useEffect(() => setIndex(enabled[0] ?? 0), [query, items.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => listRef.current?.querySelector(`[data-index="${index}"]`)?.scrollIntoView({ block: "nearest" }), [index]);
+  useEffect(() => {
+    setIndex(enabled[0] ?? 0);
+  }, [query, items.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Braces matter: newer browsers return a Promise from scrollIntoView, which React
+  // would treat as a cleanup function.
+  useEffect(() => {
+    listRef.current?.querySelector(`[data-index="${index}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [index]);
 
   const step = (d: 1 | -1) => {
     if (!enabled.length) return;

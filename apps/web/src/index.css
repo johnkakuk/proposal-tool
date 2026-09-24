@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Admin UI palette. Proposal themes are applied separately via CSS variables from
-   the brand settings (packages/shared themeToCssVars). */
+   the brand settings (ThemeScope → themeToCssVars). */
 @theme {
   --color-ink: #1b1f24;
   --color-brand: #0f2a44;
@@ -17,4 +17,108 @@ body,
 
 body {
   @apply bg-slate-50 text-ink antialiased;
+}
+
+/* ---------------------------------------------------------------------------
+   Proposal theme + typography (editor canvas, preview, public viewer, print)
+   --------------------------------------------------------------------------- */
+.proposal-theme {
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+/* Prose styles apply to top-level prose only (direct children), never to headings or
+   lists inside objects like the cover, which style themselves. */
+.proposal-prose {
+  line-height: 1.7;
+}
+.proposal-prose > * + * {
+  margin-top: 0.85em;
+}
+.proposal-prose > :is(h1, h2, h3),
+.proposal-h2 {
+  font-family: var(--font-heading);
+  color: var(--color-primary);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.proposal-prose > h1 {
+  font-size: 2.25rem;
+  margin-top: 2rem;
+}
+.proposal-prose > h2,
+.proposal-h2 {
+  font-size: 1.75rem;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+.proposal-prose > h3 {
+  font-size: 1.3rem;
+  margin-top: 1.5rem;
+}
+.proposal-prose > :first-child {
+  margin-top: 0;
+}
+.proposal-prose > :is(p, ul, ol, blockquote) a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.proposal-prose > ul,
+.proposal-prose li > ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.proposal-prose > ol,
+.proposal-prose li > ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+.proposal-prose li + li {
+  margin-top: 0.25em;
+}
+.proposal-prose li > p {
+  margin: 0;
+}
+.proposal-prose > blockquote {
+  border-left: 4px solid var(--color-accent);
+  padding-left: 1rem;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+/* ---------------------------------------------------------------------------
+   Editor
+   --------------------------------------------------------------------------- */
+.proposal-editor {
+  min-height: 60vh;
+}
+.proposal-editor :is(p, h1, h2, h3).is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: rgb(148 163 184);
+  font-style: normal;
+}
+.proposal-editor .suggestion {
+  border-radius: 4px;
+  background: rgb(15 42 68 / 0.08);
+  padding: 0 2px;
+}
+.proposal-editor .ProseMirror-selectednode {
+  outline: none;
+}
+.ProseMirror-dropcursor,
+.proposal-editor + .ProseMirror-dropcursor {
+  background: var(--color-accent, #e07a1f) !important;
+}
+.ProseMirror-gapcursor::after {
+  border-top-color: var(--color-accent, #e07a1f);
+}
+
+@media print {
+  body {
+    background: white;
+  }
 }

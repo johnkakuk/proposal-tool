@@ -56,6 +56,14 @@ export function insertObject(editor: Editor, range: Range, type: BlockType) {
     .deleteRange(range)
     .insertContent({ type: OBJECT_NODE, attrs: { blockId, blockType: type, props, aux, hidden: false } })
     .run();
+
+  // Leave a line to keep writing on after the object (empty paragraphs aren't saved).
+  editor.state.doc.forEach((node, pos, index) => {
+    if (node.attrs.blockId !== blockId) return;
+    const next = editor.state.doc.maybeChild(index + 1);
+    if (next?.type.name === "paragraph" && next.content.size === 0) return;
+    editor.view.dispatch(editor.state.tr.insert(pos + node.nodeSize, editor.schema.nodes.paragraph!.create()));
+  });
 }
 
 /** Everything the "/" menu offers: prose formats plus every object in the block registry. */

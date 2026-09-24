@@ -14,11 +14,13 @@
     "gen:seed": "tsx scripts/gen-seed-templates.ts",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
-    "test:integration": "pnpm --filter @bridger/api test:integration"
+    "test:integration": "pnpm --filter @bridger/api test:integration",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@bridger/shared": "workspace:*",
     "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.2",
     "supabase": "^2.117.0",
     "tsx": "^4.23.15",

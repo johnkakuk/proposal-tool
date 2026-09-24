@@ -1,8 +1,19 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM"],
-    "types": ["node"]
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "node"
+    ]
   },
-  "include": ["scripts", "supabase/tests", "vitest.config.ts"]
+  "include": [
+    "scripts",
+    "supabase/tests",
+    "e2e",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
 }
