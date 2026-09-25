@@ -23,8 +23,8 @@ interface SettingsRow {
   require_signer_email_otp: boolean;
 }
 
-const HEADING_FONTS = ["Playfair Display", "DM Serif Display", "Merriweather", "Lora", "Fraunces", "Montserrat", "Poppins", "Raleway", "Oswald", "Inter"];
-const BODY_FONTS = ["Inter", "Source Sans 3", "Lato", "Open Sans", "Roboto", "Nunito Sans", "Work Sans", "IBM Plex Sans", "Merriweather", "Lora"];
+const HEADING_FONTS = ["Playfair Display", "DM Serif Display", "Merriweather", "Lora", "Fraunces", "Montserrat", "Poppins", "Raleway", "Oswald", "Kanit", "Titillium Web", "Inter"];
+const BODY_FONTS = ["Inter", "Source Sans 3", "Lato", "Open Sans", "Roboto", "Nunito Sans", "Work Sans", "IBM Plex Sans", "Kanit", "Titillium Web", "Merriweather", "Lora"];
 const TIMEZONES = ["America/Los_Angeles", "America/Denver", "America/Phoenix", "America/Chicago", "America/New_York", "America/Anchorage", "Pacific/Honolulu", "UTC"];
 
 export function useSettingsRow() {
