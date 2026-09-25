@@ -120,6 +120,16 @@ body {
   background: rgb(15 42 68 / 0.08);
   padding: 0 2px;
 }
+/* When an object is selected, ProseMirror adds .ProseMirror-hideselection, which hides the
+   caret and selection highlight across the whole editor. Form fields inside objects
+   still need both. */
+.ProseMirror-hideselection [contenteditable="false"] :is(input, textarea, select) {
+  caret-color: auto;
+}
+.ProseMirror-hideselection [contenteditable="false"] :is(input, textarea)::selection {
+  background: Highlight;
+  color: HighlightText;
+}
 .proposal-editor .ProseMirror-selectednode {
   outline: none;
 }

@@ -34,6 +34,7 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - **Pricing tables own their sections** in `aux.sections`, so pricing edits are undoable. On save, sections are collected into `pricing.sections`. Proposal-level discounts, tax, and notes live in the sidebar (outside undo).
 - `extensions/blockIds.ts` keeps top-level block IDs present and unique. Copies get new IDs plus the block type's `onDuplicate`.
 - Block renderers use **container queries** (`@lg:`, `@2xl:`), not viewport breakpoints, so the mobile preview is accurate.
+- Text fields inside objects must use the `fields.tsx` kit (`TextInput`, `TextArea`, `BufferedInput`, `useBufferedText`), never a raw `value`/`onChange` input. Object edits go through a ProseMirror transaction and re-render late, so a directly bound input makes the caret jump to the end on every keystroke.
 - Effects: always use braces (`useEffect(() => { … })`). Newer browsers return a Promise from `scrollIntoView`, which React treats as a cleanup function.
 
 ## Publishing & the public viewer

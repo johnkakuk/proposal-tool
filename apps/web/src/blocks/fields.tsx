@@ -1,5 +1,5 @@
 import { centsToInput, parseDollarsToCents } from "@bridger/shared";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
 
 /**
  * Form kit for block Editors. Keeps every object's editor short and consistent.
@@ -9,6 +9,42 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 
 const inputClass =
   "block w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-ink shadow-xs placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+
+/**
+ * Text the user is typing, held locally so the caret stays put.
+ *
+ * Object edits are saved into the editor document, which re-renders the form a moment
+ * after the keystroke. If the input were bound straight to that value, React would write
+ * it back into the field after the browser had already moved the caret, and the caret
+ * would jump to the end on every key. So the field shows its own copy, reports each
+ * change, and only takes the outside value when it really changed from elsewhere
+ * (undo/redo, AI edits, another field).
+ */
+export function useBufferedText(value: string | undefined, onChange: (v: string) => void): [string, (v: string) => void] {
+  const [text, setText] = useState(value ?? "");
+  const lastSent = useRef(value ?? "");
+  useEffect(() => {
+    const next = value ?? "";
+    if (next !== lastSent.current) {
+      lastSent.current = next;
+      setText(next);
+    }
+  }, [value]);
+  return [
+    text,
+    (v) => {
+      lastSent.current = v;
+      setText(v);
+      onChange(v);
+    },
+  ];
+}
+
+/** A plain `<input>` with buffered text (see useBufferedText), for inputs outside `Field`. */
+export function BufferedInput({ value, onValueChange, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & { value: string | undefined; onValueChange: (v: string) => void }) {
+  const [text, setText] = useBufferedText(value, onValueChange);
+  return <input {...rest} value={text} onChange={(e) => setText(e.target.value)} />;
+}
 
 export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {
   return (
@@ -26,7 +62,7 @@ export function TextInput(p: { label: string; value: string | undefined; onChang
   const id = useId();
   return (
     <Field label={p.label} hint={p.hint} htmlFor={id}>
-      <input id={id} type={p.type ?? "text"} className={inputClass} value={p.value ?? ""} placeholder={p.placeholder} onChange={(e) => p.onChange(e.target.value)} />
+      <BufferedInput id={id} type={p.type ?? "text"} className={inputClass} value={p.value} placeholder={p.placeholder} onValueChange={p.onChange} />
     </Field>
   );
 }
@@ -38,15 +74,63 @@ export function OptionalTextInput(p: { label: string; value: string | undefined;
 
 export function TextArea(p: { label: string; value: string | undefined; onChange: (v: string) => void; rows?: number; placeholder?: string; hint?: string }) {
   const id = useId();
+  const [text, setText] = useBufferedText(p.value, p.onChange);
   return (
     <Field label={p.label} hint={p.hint} htmlFor={id}>
-      <textarea id={id} rows={p.rows ?? 3} className={inputClass} value={p.value ?? ""} placeholder={p.placeholder} onChange={(e) => p.onChange(e.target.value)} />
+      <textarea id={id} rows={p.rows ?? 3} className={inputClass} value={text} placeholder={p.placeholder} onChange={(e) => setText(e.target.value)} />
     </Field>
   );
 }
 
 export function MarkdownInput(p: { label: string; value: string | undefined; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
   return <TextArea {...p} rows={p.rows ?? 5} hint="Markdown: **bold**, *italic*, [link](https://…), - lists, > quotes" />;
+}
+
+/**
+ * An image: paste a URL or upload a file (to the public assets bucket). The uploader is
+ * loaded on demand so the public viewer, which shares these block modules, never pulls in
+ * the Supabase SDK.
+ */
+export function ImageInput(p: { label: string; value: string | undefined; onChange: (v: string | undefined) => void; kind: string; hint?: string; maxMb?: number }) {
+  const id = useId();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const upload = async (file: File) => {
+    setError(null);
+    setBusy(true);
+    try {
+      const { uploadAsset } = await import("../lib/uploadAsset");
+      p.onChange(await uploadAsset(file, p.kind, (p.maxMb ?? 5) * 1024 * 1024));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+  return (
+    <Field label={p.label} hint={p.hint} htmlFor={id}>
+      <div className="flex items-center gap-2">
+        {p.value && <img src={p.value} alt="" className="size-9 shrink-0 rounded border border-slate-200 bg-slate-100 object-contain" />}
+        <BufferedInput id={id} type="url" className={inputClass} value={p.value} placeholder="Paste a URL or upload" onValueChange={(v) => p.onChange(v === "" ? undefined : v)} />
+        <label className={`shrink-0 cursor-pointer rounded-md px-2.5 py-1.5 text-sm font-medium text-brand ring-1 ring-slate-300 focus-within:ring-2 focus-within:ring-brand hover:bg-slate-50 ${busy ? "pointer-events-none opacity-60" : ""}`}>
+          {busy ? "Uploading…" : "Upload"}
+          <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" aria-label={`Upload ${p.label.toLowerCase()}`} className="sr-only" disabled={busy} onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
+        </label>
+        {p.value && (
+          <button type="button" className="shrink-0 text-sm text-slate-500 hover:text-red-700" onClick={() => p.onChange(undefined)}>
+            Remove
+          </button>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </Field>
+  );
 }
 
 export function SelectInput<V extends string | number>(p: { label: string; value: V; options: { value: V; label: string }[]; onChange: (v: V) => void }) {

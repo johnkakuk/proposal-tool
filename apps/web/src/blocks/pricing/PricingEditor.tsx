@@ -9,7 +9,7 @@ import {
   type PricingSection,
 } from "@bridger/shared";
 import { useState } from "react";
-import { AddButton, IconButton, MarkdownInput, MoneyInput, NumberInput, SelectInput, TextInput, Toggle } from "../fields";
+import { AddButton, BufferedInput, IconButton, MarkdownInput, MoneyInput, NumberInput, SelectInput, TextInput, Toggle } from "../fields";
 import { CADENCE_LABEL, cadenceParts, money } from "./format";
 
 export const newLineItem = (): LineItem => ({ id: newItemId(), name: "", quantity: 1, unitPriceCents: 0, billing: "one_time", selectedByDefault: false });
@@ -151,12 +151,12 @@ function ItemRow(p: {
             />
           )}
         </span>
-        <input
+        <BufferedInput
           aria-label="Item name"
           placeholder="Item name"
           className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
           value={item.name}
-          onChange={(e) => p.onChange({ ...item, name: e.target.value })}
+          onValueChange={(name) => p.onChange({ ...item, name })}
         />
         <div className="col-span-2 grid grid-cols-[4.5rem_1fr_1fr] gap-2 @2xl:contents">
           <NumberInput compact label="Quantity" value={item.quantity} max={1_000_000} onChange={(quantity) => p.onChange({ ...item, quantity })} />

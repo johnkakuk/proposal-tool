@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectSaved, focusBeforeSignature, login, slash, unique } from "./helpers";
+import { expectSaved, focusBeforeSignature, login, newTemplateProposal, slash, unique } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await login(page);
@@ -172,4 +172,69 @@ test("undo reverts edits, including object changes", async ({ page }) => {
   await expect(page.locator("[data-block-type='divider']")).toHaveCount(0);
   await page.getByRole("button", { name: "Redo" }).click();
   await expect(page.locator("[data-block-type='divider']")).toHaveCount(1);
+});
+
+test("typing mid-text in an object's fields keeps the caret where you clicked", async ({ page }) => {
+  await newTemplateProposal(page, unique("Caret"));
+  const typeAt = async (field: import("@playwright/test").Locator, text: string, at: number, insert: string) => {
+    await field.fill(text);
+    await field.click();
+    await field.evaluate((el: HTMLInputElement | HTMLTextAreaElement, i) => el.setSelectionRange(i, i), at);
+    await page.keyboard.type(insert);
+    return [await field.inputValue(), await field.evaluate((el: HTMLInputElement | HTMLTextAreaElement) => el.selectionStart)] as const;
+  };
+
+  // Text input (cover title). The caret must also stay visible while the object is selected.
+  const cover = page.locator("[data-block-type='cover']").first();
+  await cover.hover();
+  await cover.getByRole("button", { name: "Edit" }).click();
+  const title = cover.getByLabel("Title", { exact: true });
+  expect(await typeAt(title, "Hello World", 5, "ABC")).toEqual(["HelloABC World", 8]);
+  await page.locator(".ProseMirror").evaluate((el) => el.classList.add("ProseMirror-hideselection"));
+  expect(await title.evaluate((el) => getComputedStyle(el).caretColor)).not.toBe("rgba(0, 0, 0, 0)");
+  await page.locator(".ProseMirror").evaluate((el) => el.classList.remove("ProseMirror-hideselection"));
+  await cover.getByRole("button", { name: "Done" }).click();
+
+  // Textarea (terms) and a pricing item name
+  const terms = page.locator("[data-block-type='terms']").first();
+  await terms.hover();
+  await terms.getByRole("button", { name: "Edit" }).click();
+  expect(await typeAt(terms.getByLabel("Terms"), "Net 30 days", 4, "XY")).toEqual(["Net XY30 days", 6]);
+  await terms.getByRole("button", { name: "Done" }).click();
+
+  const pricing = page.locator("[data-block-type='pricing']").first();
+  await pricing.hover();
+  await pricing.getByRole("button", { name: "Edit" }).click();
+  expect(await typeAt(pricing.getByLabel("Item name").first(), "Full Chest", 4, "!!")).toEqual(["Full!! Chest", 6]);
+  await expectSaved(page);
+});
+
+test("uploads a client logo and background image from the cover form", async ({ page }) => {
+  await newTemplateProposal(page, unique("Cover upload"));
+  const cover = page.locator("[data-block-type='cover']").first();
+  await cover.hover();
+  await cover.getByRole("button", { name: "Edit" }).click();
+  // 1×1 PNG
+  const png = { name: "logo.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") };
+
+  await cover.getByLabel("Upload client logo").setInputFiles(png);
+  await expect(cover.getByLabel("Client logo", { exact: true })).toHaveValue(/\/storage\/v1\/object\/public\/assets\/[0-9a-f-]{36}\/client-logo-/);
+
+  await cover.getByLabel("Upload background image").setInputFiles({ ...png, name: "bg.png" });
+  await expect(cover.getByLabel("Background image", { exact: true })).toHaveValue(/cover-background-/);
+
+  // Wrong type is refused with a message
+  await cover.getByLabel("Upload background image").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hi") });
+  await expect(cover.getByRole("alert")).toContainText("PNG, JPEG, WebP, GIF, or SVG");
+
+  // The cover shows both once the form is closed
+  await cover.getByRole("button", { name: "Done" }).click();
+  await expect(cover.locator("section img").first()).toHaveAttribute("src", /client-logo-/);
+  await expect(cover.locator("section").first()).toHaveAttribute("style", /cover-background-/);
+
+  await cover.hover();
+  await cover.getByRole("button", { name: "Edit" }).click();
+  await cover.getByRole("button", { name: "Remove" }).first().click();
+  await expect(cover.getByLabel("Client logo", { exact: true })).toHaveValue("");
+  await expectSaved(page);
 });

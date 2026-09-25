@@ -1,5 +1,5 @@
 import { formatIsoDate } from "../render/format";
-import { EditorGrid, OptionalTextInput, TextInput } from "./fields";
+import { EditorGrid, ImageInput, TextInput } from "./fields";
 import type { BlockUI } from "./types";
 
 export const cover: BlockUI<"cover"> = {
@@ -7,7 +7,7 @@ export const cover: BlockUI<"cover"> = {
   menu: { description: "Title page with the client's name", icon: "🏁", keywords: ["title", "hero", "front page"], group: "Layout" },
   Renderer: ({ props }) => (
     <section
-      className="relative overflow-hidden rounded-xl bg-(--color-primary) bg-cover bg-center px-8 py-16 text-(--color-on-primary) @lg:px-12 @lg:py-24"
+      className={`relative overflow-hidden rounded-xl bg-(--color-primary) bg-cover bg-center px-8 py-16 @lg:px-12 @lg:py-24 ${props.backgroundImageUrl ? "text-white" : "text-(--color-on-primary)"}`}
       style={props.backgroundImageUrl ? { backgroundImage: `linear-gradient(rgb(0 0 0 / .55), rgb(0 0 0 / .55)), url("${props.backgroundImageUrl}")` } : undefined}
     >
       {props.clientLogoUrl && <img src={props.clientLogoUrl} alt="" className="mb-10 h-12 w-auto object-contain" />}
@@ -29,8 +29,12 @@ export const cover: BlockUI<"cover"> = {
         <TextInput label="Client name" value={props.clientName} onChange={set("clientName")} />
         <TextInput label="Prepared by" value={props.preparedBy} onChange={set("preparedBy")} />
         <TextInput label="Date" type="date" value={props.date} onChange={set("date")} />
-        <OptionalTextInput label="Client logo URL" value={props.clientLogoUrl} onChange={set("clientLogoUrl")} placeholder="https://…" />
-        <OptionalTextInput label="Background image URL" value={props.backgroundImageUrl} onChange={set("backgroundImageUrl")} placeholder="https://…" />
+        <div className="@lg:col-span-2">
+          <ImageInput label="Client logo" kind="client-logo" value={props.clientLogoUrl} onChange={set("clientLogoUrl")} maxMb={2} hint="Shown on the cover. A light or white version reads best." />
+        </div>
+        <div className="@lg:col-span-2">
+          <ImageInput label="Background image" kind="cover-background" value={props.backgroundImageUrl} onChange={set("backgroundImageUrl")} hint="Darkened automatically so the text stays readable. Landscape, under 5 MB." />
+        </div>
       </EditorGrid>
     );
   },
