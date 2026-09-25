@@ -19,16 +19,20 @@ export interface OutgoingEmail {
   proposalId?: string;
   replyTo?: string;
   attachments?: { filename: string; contentBase64: string }[];
+  /** When set, the email is sent at most once for this key, ever (claimed in email_log). */
+  dedupeKey?: string;
 }
 
 export const memoryOutbox: OutgoingEmail[] = [];
 
-export async function sendEmail(env: Env, db: SupabaseClient, email: OutgoingEmail): Promise<{ ok: boolean; error?: string }> {
-  const { data: log } = await db
+export async function sendEmail(env: Env, db: SupabaseClient, email: OutgoingEmail): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  const { data: log, error: logError } = await db
     .from("email_log")
-    .insert({ owner_id: email.ownerId, to_email: email.to, template: email.template, proposal_id: email.proposalId ?? null, status: "queued" })
+    .insert({ owner_id: email.ownerId, to_email: email.to, template: email.template, proposal_id: email.proposalId ?? null, status: "queued", dedupe_key: email.dedupeKey ?? null })
     .select("id")
     .single();
+  // Unique violation on dedupe_key: this email was already sent (or is being sent).
+  if (logError?.code === "23505") return { ok: true, skipped: true };
 
   let providerId: string | null = null;
   let error: string | undefined;

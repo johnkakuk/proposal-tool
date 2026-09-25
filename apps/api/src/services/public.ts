@@ -197,8 +197,8 @@ export async function getPublicMeta(db: SupabaseClient, slug: string): Promise<P
   };
 }
 
-/** "Request an extension" on the expired page (SPEC §8.1). Email to John arrives in Phase 5. */
-export async function requestExtension(db: SupabaseClient, slug: string, meta: { ip?: string; userAgent?: string; message?: string }): Promise<void> {
+/** "Request an extension" on the expired page (SPEC §8.1). Returns the proposal ID for the notification. */
+export async function requestExtension(db: SupabaseClient, slug: string, meta: { ip?: string; userAgent?: string; message?: string }): Promise<string> {
   const row = await loadPublicRow(db, slug);
   if (publicState(row) !== "expired") throw new ApiError(409, "not_expired", "This proposal hasn't expired.");
   must(
@@ -213,4 +213,5 @@ export async function requestExtension(db: SupabaseClient, slug: string, meta: {
     }),
     "record the request",
   );
+  return row.id;
 }

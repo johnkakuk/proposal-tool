@@ -91,3 +91,8 @@ export const SaveAsTemplateSchema = z.object({
   description: optionalText(2_000),
   category: optionalText(100),
 });
+
+/** "Send email" to the client (SPEC §9): optional personal message. */
+export const SendProposalEmailSchema = z.object({
+  message: z.string().trim().max(5_000).optional(),
+});

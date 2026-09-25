@@ -1,7 +1,9 @@
 import { maskEmail, sha256Hex } from "@bridger/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Env } from "../env.js";
-import { escapeHtml, sendEmail } from "../lib/email.js";
+import { otpCode } from "../emails/templates.js";
+import { sendEmail } from "../lib/email.js";
+import { ownerContext } from "./notify.js";
 import { ApiError } from "../lib/errors.js";
 import { must } from "./context.js";
 import { loadPublicRow, publicState, type PublicRow } from "./public.js";
@@ -58,15 +60,14 @@ export async function sendOtp(env: Env, db: SupabaseClient, slug: string, rawEma
   const code = randomCode();
   must(await db.from("otp_codes").insert({ proposal_id: row.id, email, code_hash: await hashCode(env.SIGNING_SECRET, row.id, email, code) }), "create the code");
 
+  const owner = await ownerContext(db, row.owner_id);
   const sent = await sendEmail(env, db, {
     ownerId: row.owner_id,
     proposalId: row.id,
     to: email,
     template: "otp",
     replyTo: env.OWNER_EMAIL,
-    subject: `${code} is your code to sign “${row.title}”`,
-    text: `Your verification code is ${code}. It expires in 10 minutes.\n\nIf you didn't request this, you can ignore this email.`,
-    html: `<p>Your verification code for signing <strong>${escapeHtml(row.title)}</strong>:</p><p style="font-size:28px;letter-spacing:6px;font-weight:700">${code}</p><p>It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>`,
+    ...otpCode({ brand: owner.brand, title: row.title, code }),
   });
   if (!sent.ok) throw new ApiError(503, "email_failed", "We couldn't send the code. Please try again in a moment.");
   await audit(db, row, "otp_sent", meta, email);

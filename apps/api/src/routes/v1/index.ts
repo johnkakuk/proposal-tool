@@ -5,6 +5,7 @@ import {
   DuplicateProposalSchema,
   ListProposalsQuerySchema,
   SaveAsTemplateSchema,
+  SendProposalEmailSchema,
   TemplateInputSchema,
   TemplatePatchSchema,
   UpdateProposalSchema,
@@ -19,6 +20,7 @@ import * as clients from "../../services/clients.js";
 import type { ServiceContext } from "../../services/context.js";
 import * as proposals from "../../services/proposals.js";
 import { publishProposal } from "../../services/publish.js";
+import { sendProposalEmail } from "../../services/sendProposal.js";
 import { audit } from "../../services/audit.js";
 import { exportProposalPdf } from "../../services/pdf.js";
 import { loadSignature } from "../../services/public.js";
@@ -85,6 +87,7 @@ export const v1 = new Hono<AppEnv>()
       headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(filename)}` },
     });
   })
+  .post("/proposals/:id/send-email", async (c) => c.json(await sendProposalEmail(ctx(c), c.env, id(c), await body(c, SendProposalEmailSchema))))
   .post("/proposals/:id/archive", async (c) => c.json(await proposals.archiveProposal(ctx(c), id(c))))
   .post("/proposals/:id/save-as-template", async (c) =>
     c.json(await proposals.saveProposalAsTemplate(ctx(c), id(c), await body(c, SaveAsTemplateSchema)), 201),

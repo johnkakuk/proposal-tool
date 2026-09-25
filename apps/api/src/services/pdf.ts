@@ -57,18 +57,17 @@ export { toBase64 };
 const PDF_ATTEMPTS_KEY = (id: string) => `pdf-attempts:${id}`;
 export const MAX_PDF_ATTEMPTS = 3;
 
-/** One attempt, counted in KV. Returns true when the PDF exists afterwards. */
-export async function attemptSignedPdf(env: Env, db: SupabaseClient, signatureId: string): Promise<boolean> {
+/** One attempt, counted in KV. Returns whether the PDF exists afterwards and the attempts used. */
+export async function attemptSignedPdf(env: Env, db: SupabaseClient, signatureId: string): Promise<{ ok: boolean; attempts: number }> {
   const attempts = Number((await env.RATE_KV.get(PDF_ATTEMPTS_KEY(signatureId))) ?? 0);
-  if (attempts >= MAX_PDF_ATTEMPTS) return false;
+  if (attempts >= MAX_PDF_ATTEMPTS) return { ok: false, attempts };
   try {
     await generateSignedPdf(env, db, signatureId);
-    return true;
+    return { ok: true, attempts: attempts + 1 };
   } catch (e) {
     await env.RATE_KV.put(PDF_ATTEMPTS_KEY(signatureId), String(attempts + 1), { expirationTtl: 14 * 86_400 });
     console.error(`Signed PDF attempt ${attempts + 1}/${MAX_PDF_ATTEMPTS} failed for ${signatureId}:`, e);
-    // Phase 5: after the last attempt, email John (SPEC §12).
-    return false;
+    return { ok: false, attempts: attempts + 1 };
   }
 }
 

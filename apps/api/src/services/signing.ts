@@ -136,8 +136,8 @@ export async function signProposal(env: Env, db: SupabaseClient, slug: string, i
   return { signatureId, certificateId, documentHash };
 }
 
-/** Decline (SPEC §8.2): status → declined with an optional reason. Email to John in Phase 5. */
-export async function declineProposal(db: SupabaseClient, slug: string, reason: string | undefined, meta: SigningMeta): Promise<void> {
+/** Decline (SPEC §8.2): status → declined with an optional reason. Returns the proposal ID. */
+export async function declineProposal(db: SupabaseClient, slug: string, reason: string | undefined, meta: SigningMeta): Promise<string> {
   const row = await loadPublicRow(db, slug);
   if (publicState(row) !== "active") throw new ApiError(409, "not_declinable", "This proposal can no longer be declined.");
   const updated = must(
@@ -154,4 +154,5 @@ export async function declineProposal(db: SupabaseClient, slug: string, reason: 
     await db.from("audit_events").insert({ owner_id: row.owner_id, proposal_id: row.id, event_type: "declined", actor: "client", ip: meta.ip ?? null, user_agent: meta.userAgent ?? null, metadata: reason ? { reason } : {} }),
     "write the audit log",
   );
+  return row.id;
 }

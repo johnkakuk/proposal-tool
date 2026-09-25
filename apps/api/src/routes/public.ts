@@ -7,6 +7,7 @@ import { verifyRenderToken } from "../lib/renderToken.js";
 import { serviceClient } from "../lib/supabase.js";
 import { body } from "../lib/validate.js";
 import { afterSigning } from "../services/afterSigning.js";
+import { onDeclined, onExtensionRequested } from "../services/notify.js";
 import { sendOtp, verifyOtp } from "../services/otp.js";
 import { getPublicCertificate, getPublicMeta, getPublicProposal, loadPublicRow, loadSignature, requestExtension } from "../services/public.js";
 import { declineProposal, signProposal } from "../services/signing.js";
@@ -49,7 +50,9 @@ export const publicRoutes = new Hono<AppEnv>()
   .post("/proposals/:slug/extension-request", async (c) => {
     await rateLimit(c.env.RATE_KV, `ext:${ip(c)}`, 5, 3600);
     const input = await body(c, z.object({ message: z.string().max(1000).optional() }));
-    await requestExtension(serviceClient(c.env), c.req.param("slug"), { ...meta(c), message: input.message });
+    const db = serviceClient(c.env);
+    const proposalId = await requestExtension(db, c.req.param("slug"), { ...meta(c), message: input.message });
+    c.executionCtx.waitUntil(onExtensionRequested(c.env, db, proposalId, input.message?.trim() || null));
     return c.json({ ok: true });
   })
   .post("/proposals/:slug/otp", async (c) => {
@@ -75,6 +78,8 @@ export const publicRoutes = new Hono<AppEnv>()
   .post("/proposals/:slug/decline", async (c) => {
     await rateLimit(c.env.RATE_KV, `decline:${ip(c)}`, 10, 3600);
     const { reason } = await body(c, DeclineSchema);
-    await declineProposal(serviceClient(c.env), c.req.param("slug"), reason, meta(c));
+    const db = serviceClient(c.env);
+    const proposalId = await declineProposal(db, c.req.param("slug"), reason, meta(c));
+    c.executionCtx.waitUntil(onDeclined(c.env, db, proposalId, reason || null));
     return c.json({ ok: true });
   });
