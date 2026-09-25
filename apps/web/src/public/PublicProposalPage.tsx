@@ -2,7 +2,6 @@ import { resolveTheme, type PublicProposal, type Selections } from "@bridger/sha
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router";
-import { cadenceParts, money } from "../blocks/pricing/format";
 import { formatIsoDate } from "../render/format";
 import { ProposalBlocks, RenderProvider, useRenderContextValue } from "../render/ProposalRenderer";
 import { BrandLogo } from "../render/BrandLogo";
@@ -104,16 +103,6 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
                 fallback={<span className="font-(family-name:--font-heading) font-bold text-(--color-primary-text)">{proposal.brand.company?.name ?? "Proposal"}</span>}
               />
               <div className="ml-auto flex items-center gap-4">
-                {value.result && value.pricing.sections.length > 0 && (
-                  <div className="text-right text-sm leading-tight tabular-nums" aria-live="polite" aria-label="Current total">
-                    <span className="sr-only">Total: </span>
-                    {cadenceParts(value.result.total).map(([c, v]) => (
-                      <div key={c} className="font-semibold">
-                        {money(v, c)}
-                      </div>
-                    ))}
-                  </div>
-                )}
                 {signed ? (
                   <>
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">Signed</span>

@@ -76,13 +76,12 @@ export function ownerSigned(x: SignedEmailInput): EmailContent {
   const totalsRows: [string, string][] = CADENCE.filter((c) => x.totals.total[c] > 0).map((c) => [c === "one_time" ? "One-time total" : `${c[0]!.toUpperCase()}${c.slice(1)} total`, money(x.totals.total[c], c)]);
   if (x.totals.tax) totalsRows.push([`Includes tax (${x.totals.tax.ratePct}%)`, totalLines(x.totals.tax.byCadence)]);
 
-  // Invoicing next steps replace any in-app invoice reminder (SPEC §9). Provider-neutral on purpose.
-  const checklist: string[] = [];
-  if (x.totals.total.one_time > 0) checklist.push(`Create invoice: ${money(x.totals.total.one_time)} one-time (${x.client})`);
-  for (const c of ["monthly", "quarterly", "yearly"] as const) {
-    if (x.totals.total[c] > 0) checklist.push(`Set up a recurring invoice: ${money(x.totals.total[c], c)} (${x.client})`);
-  }
-  if (checklist.length === 0) checklist.push(`Create invoice for ${x.client}`);
+  // Invoicing next steps replace any in-app invoice reminder (SPEC §9). No amounts on purpose:
+  // deposits and payment schedules live in the terms, so a computed "invoice $X" could be
+  // wrong. Provider-neutral wording.
+  const checklist: string[] = [`Review the signed proposal and send the initial invoice to ${x.client}`];
+  const recurring = (["monthly", "quarterly", "yearly"] as const).filter((c) => x.totals.total[c] > 0);
+  if (recurring.length) checklist.push(`Set up recurring billing (${recurring.join(", ")})`);
 
   const signerLine = `${x.signer.name}${x.signer.title ? `, ${x.signer.title}` : ""}${x.signer.company ? ` · ${x.signer.company}` : ""} (${x.signer.email})`;
   const html = [

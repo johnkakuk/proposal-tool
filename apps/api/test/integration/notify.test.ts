@@ -120,9 +120,11 @@ describe("signed", () => {
       expect(owner[0]!.text).toContain("Returning client discount: −$500.00");
       expect(owner[0]!.text).toContain("One-time total: $4,000.00");
       expect(owner[0]!.text).toContain("Monthly total: $1,250.00/month");
-      expect(owner[0]!.text).toContain(`- Create invoice: $4,000.00 one-time (Birchwood ${run})`);
-      expect(owner[0]!.text).toContain(`- Set up a recurring invoice: $1,250.00/month (Birchwood ${run})`);
-      expect(owner[0]!.html).toContain("<li style=\"margin:0 0 6px\">Create invoice: ");
+      expect(owner[0]!.text).toContain(`- Review the signed proposal and send the initial invoice to Birchwood ${run}`);
+      expect(owner[0]!.text).toContain("- Set up recurring billing (monthly)");
+      // Amounts stay in the Totals table only; the to-do list never computes an invoice amount.
+      const nextStep = owner[0]!.text.split("Next step:")[1]!.split("Signed PDF:")[0]!;
+      expect(nextStep).not.toContain("$");
       expect(owner[0]!.html).not.toContain("☐");
       expect(owner[0]!.text).not.toContain("QuickBooks");
     } finally {

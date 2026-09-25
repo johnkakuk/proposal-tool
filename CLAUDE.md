@@ -101,6 +101,7 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - Route errors (including stale chunks after a deploy) render `RouteError`.
 
 ## Deployment
+- **Branches:** work happens on `dev`; merging `dev` into `main` (and pushing) is the release. Pushing `dev` doesn't deploy.
 - **Pushing to `main` deploys** via `.github/workflows/deploy.yml` (typecheck + unit tests → Worker → Pages → health check). Don't push unless John approved it. Migrations are never automatic: `pnpm deploy:db` before pushing code that needs them.
 - Step by step: `docs/DEPLOYMENT.md`. `pnpm deploy:db` / `deploy:api` / `deploy:web` / `deploy:all`. Don't name a script plain `deploy` at the root, because `pnpm deploy` is a built-in.
 - The production web build reads `apps/web/.env.production.local`.
