@@ -9,7 +9,7 @@ export const divider: BlockUI<"divider"> = {
     props.style === "space" ? (
       <div className="h-12" />
     ) : props.style === "dots" ? (
-      <div className="py-4 text-center tracking-[1em] opacity-40">•••</div>
+      <div className="py-4 text-center tracking-[1em] text-(--color-muted)">•••</div>
     ) : (
       <hr className="my-4 border-black/15" />
     ),
@@ -30,7 +30,7 @@ export const divider: BlockUI<"divider"> = {
 function PageBreakRenderer() {
   const { mode } = useRenderContext();
   if (mode === "print") return <div style={{ breakAfter: "page" }} />;
-  if (mode === "editor") return <div className="border-t-2 border-dashed border-slate-300 pt-1 text-center text-xs text-slate-400">Page break (PDF only)</div>;
+  if (mode === "editor") return <div className="border-t-2 border-dashed border-slate-300 pt-1 text-center text-xs text-slate-500">Page break (PDF only)</div>;
   return null;
 }
 

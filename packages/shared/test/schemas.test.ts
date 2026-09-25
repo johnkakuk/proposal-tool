@@ -215,3 +215,34 @@ describe("bot detection", () => {
       expect(isBotUserAgent(ua), ua).toBe(false);
   });
 });
+
+describe("theme contrast", () => {
+  it("computes WCAG contrast ratios", async () => {
+    const { contrastRatio } = await import("../src/index.js");
+    expect(contrastRatio("#FFFFFF", "#000000")).toBeCloseTo(21, 1);
+    expect(contrastRatio("#FFFFFF", "#E07A1F")).toBeCloseTo(3.01, 1);
+  });
+
+  it("derives legible text for any brand palette, leaving passing colors alone", async () => {
+    const { contrastRatio, readableOn, textOn, themeToCssVars } = await import("../src/index.js");
+    expect(textOn("#0F2A44")).toBe("#FFFFFF");
+    expect(textOn("#E07A1F")).toBe("#111827"); // white on this orange is only 3:1
+    expect(readableOn("#0F2A44", "#FFFFFF")).toBe("#0F2A44"); // already passes
+    const darkened = readableOn("#E07A1F", "#FFFFFF");
+    expect(contrastRatio(darkened, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
+    for (const [primary, accent, background] of [
+      ["#0F2A44", "#E07A1F", "#FFFFFF"],
+      ["#FFD60A", "#00FFFF", "#FFFFFF"],
+      ["#111111", "#333333", "#000000"],
+      ["#7C3AED", "#F59E0B", "#FAFAF9"],
+    ] as const) {
+      const v = themeToCssVars({ colors: { primary, accent, background, text: "#777777" }, headingFont: "Inter", bodyFont: "Inter" });
+      expect(contrastRatio(v["--color-on-primary"]!, primary)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(v["--color-on-accent"]!, accent)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(v["--color-accent-text"]!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(v["--color-text"]!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(v["--color-primary-text"]!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(v["--color-muted"]!, background)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});

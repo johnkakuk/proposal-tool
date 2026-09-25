@@ -64,7 +64,7 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
           if (!empty) onChange(canvas.current!.toDataURL("image/png"));
         }}
       />
-      <div className="mt-1 flex justify-between text-xs opacity-60">
+      <div className="mt-1 flex justify-between text-xs text-(--color-muted)">
         <span>{empty ? "Sign above with your mouse, finger, or stylus" : "Looks good"}</span>
         <button type="button" onClick={clear} className="underline">
           Clear

@@ -15,9 +15,14 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "test:integration": "pnpm --filter @bridger/api test:integration",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "deploy:db": "supabase db push",
+    "deploy:api": "pnpm --filter @bridger/api run deploy",
+    "deploy:web": "pnpm --filter @bridger/web run deploy",
+    "deploy:all": "pnpm deploy:db && pnpm deploy:api && pnpm deploy:web"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@bridger/shared": "workspace:*",
     "@electric-sql/pglite": "^0.5.8",
     "@modelcontextprotocol/sdk": "^1.30.1",

@@ -94,7 +94,7 @@ export function DocumentWorkspace(p: DocumentWorkspaceProps) {
                 type="button"
                 aria-pressed={device === d}
                 onClick={() => setDevice(d)}
-                className={`rounded px-2.5 py-1 text-xs font-medium capitalize ${device === d ? "bg-white shadow-xs" : "text-slate-500"}`}
+                className={`rounded px-2.5 py-1 text-xs font-medium capitalize ${device === d ? "bg-white shadow-xs" : "text-slate-600"}`}
               >
                 {d}
               </button>
@@ -154,7 +154,7 @@ function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry?: () => v
   }
   const text = { saved: "Saved", pending: "Unsaved changes", saving: "Saving…" }[state.kind];
   return (
-    <span role="status" aria-live="polite" className={`text-xs ${state.kind === "saved" ? "text-slate-400" : "text-slate-600"}`}>
+    <span role="status" aria-live="polite" className={`text-xs ${state.kind === "saved" ? "text-slate-500" : "text-slate-600"}`}>
       {text}
     </span>
   );

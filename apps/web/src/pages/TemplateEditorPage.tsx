@@ -80,7 +80,7 @@ function TemplateEditorLoaded({ template, brand, ownerSignatureName }: { templat
               Description
               <textarea rows={3} className={`mt-1 ${inputClass}`} value={description} onChange={(e) => setDescription(e.target.value)} />
             </label>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Use <code>{"{{client_name}}"}</code> and <code>{"{{default_terms}}"}</code> anywhere; they're filled in when a proposal is created from this template.
             </p>
           </div>

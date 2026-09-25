@@ -54,7 +54,7 @@ export const SlashMenu = forwardRef<SlashMenuHandle, { items: SlashItem[]; comma
         lastGroup = item.group;
         return (
           <div key={item.id}>
-            {header && <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{header}</div>}
+            {header && <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{header}</div>}
             <button
               type="button"
               role="option"

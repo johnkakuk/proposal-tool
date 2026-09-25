@@ -9,7 +9,7 @@ export const case_study: BlockUI<"case_study"> = {
     <article className="overflow-hidden rounded-xl border border-black/10">
       {props.imageUrl && <img src={props.imageUrl} alt="" className="max-h-72 w-full object-cover" />}
       <div className="p-6 @lg:p-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-(--color-accent)">Case study · {props.client}</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-(--color-accent-text)">Case study · {props.client}</p>
         <h3 className="mt-1 font-(family-name:--font-heading) text-2xl font-bold">{props.title}</h3>
         <div className="mt-6 grid gap-6 @lg:grid-cols-2">
           <div>

@@ -11,7 +11,7 @@ export const testimonial: BlockUI<"testimonial"> = {
         {props.avatarUrl && <img src={props.avatarUrl} alt="" className="size-10 rounded-full object-cover" />}
         <span>
           <strong>{props.author}</strong>
-          {(props.role || props.company) && <span className="opacity-70"> · {[props.role, props.company].filter(Boolean).join(", ")}</span>}
+          {(props.role || props.company) && <span className="text-(--color-muted)"> · {[props.role, props.company].filter(Boolean).join(", ")}</span>}
         </span>
       </figcaption>
     </figure>

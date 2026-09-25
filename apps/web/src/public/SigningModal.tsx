@@ -56,7 +56,7 @@ export function SigningModal({
   return (
     <PublicModal open={open} onClose={onClose} title={title} dismissable={step !== "done"}>
       {stepNumber > 0 && (
-        <p className="-mt-3 mb-5 text-sm opacity-60">
+        <p className="-mt-3 mb-5 text-sm text-(--color-muted)">
           Step {stepNumber} of {steps}
         </p>
       )}
@@ -233,13 +233,13 @@ function VerifyStep({ slug, email, onBack, onVerified, onError }: { slug: string
         {busy ? "Checking…" : "Verify"}
       </button>
       <div className="flex justify-between text-sm">
-        <button type="button" onClick={onBack} className="underline opacity-70">
+        <button type="button" onClick={onBack} className="underline text-(--color-muted)">
           Change email
         </button>
         <button
           type="button"
           disabled={cooldown > 0}
-          className="underline opacity-70 disabled:no-underline disabled:opacity-40"
+          className="underline text-(--color-muted) disabled:no-underline disabled:opacity-40"
           onClick={async () => {
             try {
               await sendCode(slug, email);
@@ -264,7 +264,7 @@ function SignStep({ signerName, company, onBack, onSubmit }: { signerName: strin
   const [busy, setBusy] = useState(false);
   const ready = agreed && (mode === "typed" ? typed.trim().length >= 2 : Boolean(drawn));
   const tab = (m: "typed" | "drawn", label: string) => (
-    <button type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === m ? "bg-white shadow-sm" : "opacity-60"}`}>
+    <button type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === m ? "bg-white shadow-sm" : "text-(--color-muted)"}`}>
       {label}
     </button>
   );
@@ -289,7 +289,7 @@ function SignStep({ signerName, company, onBack, onSubmit }: { signerName: strin
             Type your full name
             <input className={publicInput} value={typed} onChange={(e) => setTyped(e.target.value)} />
           </label>
-          <div className="mt-3 flex h-20 items-end border-b border-black/30 pb-1 text-4xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} aria-label="Signature preview">
+          <div className="mt-3 flex h-20 items-end border-b border-black/30 pb-1 text-4xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} role="img" aria-label="Signature preview">
             {typed}
           </div>
         </div>
@@ -303,7 +303,7 @@ function SignStep({ signerName, company, onBack, onSubmit }: { signerName: strin
       <button type="submit" className={primaryButton} disabled={!ready || busy}>
         {busy ? "Signing…" : "Sign & Accept"}
       </button>
-      <button type="button" onClick={onBack} className="block w-full text-center text-sm underline opacity-70">
+      <button type="button" onClick={onBack} className="block w-full text-center text-sm underline text-(--color-muted)">
         Back
       </button>
     </form>

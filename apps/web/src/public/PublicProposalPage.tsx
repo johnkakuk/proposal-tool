@@ -98,7 +98,7 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
               {proposal.brand.theme?.logoUrl ? (
                 <img src={proposal.brand.theme.logoUrl} alt={proposal.brand.company?.name ?? ""} className="h-8 w-auto" />
               ) : (
-                <span className="font-(family-name:--font-heading) font-bold text-(--color-primary)">{proposal.brand.company?.name ?? "Proposal"}</span>
+                <span className="font-(family-name:--font-heading) font-bold text-(--color-primary-text)">{proposal.brand.company?.name ?? "Proposal"}</span>
               )}
               <div className="ml-auto flex items-center gap-4">
                 {value.result && value.pricing.sections.length > 0 && (
@@ -119,13 +119,13 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
                         Download PDF
                       </a>
                     ) : (
-                      <span className="text-sm opacity-60" role="status">
+                      <span className="text-sm text-(--color-muted)" role="status">
                         Preparing PDF…
                       </span>
                     )}
                   </>
                 ) : (
-                  <button type="button" onClick={() => setSigning(true)} className="rounded-md bg-(--color-accent) px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110">
+                  <button type="button" onClick={() => setSigning(true)} className="rounded-md bg-(--color-accent) px-4 py-2 text-sm font-semibold text-(--color-on-accent) shadow-sm hover:brightness-110">
                     Accept proposal
                   </button>
                 )}
@@ -135,7 +135,7 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
         )}
         <main ref={mainRef} className="mx-auto max-w-4xl px-4 py-10 sm:px-8 print:max-w-none print:p-0">
           <ProposalBlocks content={doc.content} />
-          {proposal.expiresAt && active && <p className="mt-10 text-center text-sm opacity-60">This proposal is valid until {formatIsoDate(proposal.expiresAt.slice(0, 10))}.</p>}
+          {proposal.expiresAt && active && <p className="mt-10 text-center text-sm text-(--color-muted)">This proposal is valid until {formatIsoDate(proposal.expiresAt.slice(0, 10))}.</p>}
           {print && cert.data && (
             <section style={{ breakBefore: "page" }} className="pt-4">
               <h2 className="proposal-h2 !mt-0">Certificate of Completion</h2>
@@ -167,7 +167,7 @@ function Footer({ proposal }: { proposal: PublicProposal }) {
   const c = proposal.brand.company;
   if (!c) return null;
   return (
-    <footer className="border-t border-black/10 py-8 text-center text-sm opacity-70 print:hidden">
+    <footer className="border-t border-black/10 py-8 text-center text-sm text-(--color-muted) print:hidden">
       <div className="font-semibold">{c.name}</div>
       {[c.address, c.phone].filter(Boolean).map((line) => (
         <div key={line}>{line}</div>
@@ -186,8 +186,8 @@ function Branded({ proposal, children }: { proposal: PublicProposal; children: R
     <ThemeScope theme={proposal.brand.theme}>
       <div className="flex min-h-screen items-center justify-center bg-(--color-background) px-4">
         <div className="w-full max-w-lg rounded-2xl border border-black/10 p-8 text-center shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-(--color-accent)">{proposal.brand.company?.name ?? "Proposal"}</p>
-          <h1 className="mt-2 font-(family-name:--font-heading) text-2xl font-bold text-(--color-primary)">{proposal.title}</h1>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-(--color-accent-text)">{proposal.brand.company?.name ?? "Proposal"}</p>
+          <h1 className="mt-2 font-(family-name:--font-heading) text-2xl font-bold text-(--color-primary-text)">{proposal.title}</h1>
           {children}
         </div>
       </div>
@@ -200,7 +200,7 @@ function Expired({ proposal }: { proposal: PublicProposal }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | { error: string }>("idle");
   return (
     <Branded proposal={proposal}>
-      <p className="mt-4 opacity-80">
+      <p className="mt-4 text-(--color-muted)">
         This proposal expired{proposal.expiresAt ? ` on ${formatIsoDate(proposal.expiresAt.slice(0, 10))}` : ""}. Still interested? Ask for more time and we'll get back to you.
       </p>
       {status === "sent" ? (
@@ -230,7 +230,7 @@ function Expired({ proposal }: { proposal: PublicProposal }) {
               {status.error}
             </p>
           )}
-          <button type="submit" disabled={status === "sending"} className="w-full rounded-md bg-(--color-accent) px-4 py-2.5 font-semibold text-white hover:brightness-110 disabled:opacity-60">
+          <button type="submit" disabled={status === "sending"} className="w-full rounded-md bg-(--color-accent) px-4 py-2.5 font-semibold text-(--color-on-accent) hover:brightness-110 disabled:opacity-60">
             Request an extension
           </button>
         </form>
@@ -242,10 +242,10 @@ function Expired({ proposal }: { proposal: PublicProposal }) {
 function Declined({ proposal }: { proposal: PublicProposal }) {
   return (
     <Branded proposal={proposal}>
-      <p className="mt-4 opacity-80">This proposal was declined. If that was a mistake or your plans have changed, we'd love to hear from you.</p>
+      <p className="mt-4 text-(--color-muted)">This proposal was declined. If that was a mistake or your plans have changed, we'd love to hear from you.</p>
       <a
         href={`mailto:${proposal.brand.contactEmail}?subject=${encodeURIComponent(`Re: ${proposal.title}`)}`}
-        className="mt-6 inline-block rounded-md bg-(--color-accent) px-5 py-2.5 font-semibold text-white hover:brightness-110"
+        className="mt-6 inline-block rounded-md bg-(--color-accent) px-5 py-2.5 font-semibold text-(--color-on-accent) hover:brightness-110"
       >
         Get in touch
       </a>

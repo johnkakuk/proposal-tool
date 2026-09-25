@@ -6,6 +6,7 @@ import { RouterProvider } from "react-router/dom";
 import "./index.css";
 import { queryClient } from "./lib/queryClient";
 import { NotFound } from "./pages/NotFound";
+import { RouteError, RouteLoading } from "./components/RouteError";
 
 /**
  * Routes are code-split: the client-facing viewer (/p/*) never downloads the admin app,
@@ -14,6 +15,10 @@ import { NotFound } from "./pages/NotFound";
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) => async () => ({ Component: (await load())[name] });
 
 const router = createBrowserRouter([
+  {
+    errorElement: <RouteError />,
+    hydrateFallbackElement: <RouteLoading />,
+    children: [
   { path: "/", element: <Navigate to="/app" replace /> },
   {
     path: "/app",
@@ -46,6 +51,8 @@ const router = createBrowserRouter([
   { path: "/preview/:token", lazy: page(() => import("./public/PreviewPage"), "PreviewPage") },
   { path: "/p/:slug/certificate", lazy: page(() => import("./public/CertificatePage"), "CertificatePage") },
   { path: "*", element: <NotFound /> },
+    ],
+  },
 ]);
 
 createRoot(document.getElementById("root")!).render(

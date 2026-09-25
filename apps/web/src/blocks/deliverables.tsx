@@ -16,11 +16,11 @@ export const deliverables: BlockUI<"deliverables"> = {
             </span>
             <div>
               <h3 className="font-semibold">{item.title}</h3>
-              <p className="mt-1 text-sm opacity-80">{item.description}</p>
+              <p className="mt-1 text-sm text-(--color-muted)">{item.description}</p>
             </div>
           </div>
         ))}
-        {props.items.length === 0 && <p className="text-sm opacity-50">No deliverables yet.</p>}
+        {props.items.length === 0 && <p className="text-sm text-(--color-muted)">No deliverables yet.</p>}
       </div>
     </section>
   ),

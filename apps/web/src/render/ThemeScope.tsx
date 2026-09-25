@@ -1,5 +1,5 @@
 import { resolveTheme, themeToCssVars, type Theme, type ThemeOverrides } from "@bridger/shared";
-import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type CSSProperties, type ReactNode } from "react";
 
 export const FALLBACK_THEME: Theme = {
   colors: { primary: "#0F2A44", accent: "#E07A1F", background: "#FFFFFF", text: "#1B1F24" },
@@ -21,13 +21,23 @@ export function useGoogleFonts(families: string[]) {
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
+const ThemeVarsContext = createContext<CSSProperties | undefined>(undefined);
+
+/** The enclosing theme's CSS variables, for content portaled outside the scope (modals). */
+export function useThemeVars(): CSSProperties | undefined {
+  return useContext(ThemeVarsContext);
+}
+
 /** Applies brand theme + per-proposal overrides as CSS variables (SPEC §5.4). */
 export function ThemeScope({ theme, overrides, children, className }: { theme?: Theme | null; overrides?: ThemeOverrides; children: ReactNode; className?: string }) {
   const resolved = resolveTheme(theme ?? FALLBACK_THEME, overrides);
   useGoogleFonts([...new Set([resolved.headingFont, resolved.bodyFont])]);
+  const vars = themeToCssVars(resolved) as CSSProperties;
   return (
-    <div className={`proposal-theme ${className ?? ""}`} style={themeToCssVars(resolved) as CSSProperties}>
-      {children}
-    </div>
+    <ThemeVarsContext.Provider value={vars}>
+      <div className={`proposal-theme ${className ?? ""}`} style={vars}>
+        {children}
+      </div>
+    </ThemeVarsContext.Provider>
   );
 }

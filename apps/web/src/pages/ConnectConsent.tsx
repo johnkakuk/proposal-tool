@@ -58,7 +58,7 @@ export function ConnectConsent() {
                 Allow
               </Button>
             </div>
-            <p className="mt-4 text-xs text-slate-400">You can disconnect it any time in Settings → AI & API.</p>
+            <p className="mt-4 text-xs text-slate-500">You can disconnect it any time in Settings → AI & API.</p>
           </>
         )}
       </div>

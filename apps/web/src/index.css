@@ -38,7 +38,7 @@ body {
 .proposal-prose > :is(h1, h2, h3),
 .proposal-h2 {
   font-family: var(--font-heading);
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -60,7 +60,7 @@ body {
   margin-top: 0;
 }
 .proposal-prose > :is(p, ul, ol, blockquote) a {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

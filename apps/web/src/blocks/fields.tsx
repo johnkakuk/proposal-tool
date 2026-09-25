@@ -17,7 +17,7 @@ export function Field({ label, hint, children, htmlFor }: { label: string; hint?
         {label}
       </label>
       {children}
-      {hint && <p className="text-xs text-slate-400">{hint}</p>}
+      {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function NumberInput(p: { label: string; value: number; onChange: (v: num
           if (e.target.value.trim() !== "" && Number.isFinite(n) && n >= (p.min ?? 0) && (p.max === undefined || n <= p.max)) p.onChange(Math.round(n * 100) / 100);
         }}
       />
-      {p.suffix && <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-slate-400">{p.suffix}</span>}
+      {p.suffix && <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-slate-500">{p.suffix}</span>}
     </div>
   );
   return p.compact ? input : <Field label={p.label} htmlFor={id}>{input}</Field>;
@@ -117,7 +117,7 @@ export function MoneyInput(p: { label: string; cents: number; onChange: (cents: 
   }, [p.cents]);
   const input = (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-slate-400">$</span>
+      <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-slate-500">$</span>
       <input
         id={id}
         inputMode="decimal"
@@ -146,7 +146,7 @@ export function IconButton(p: { label: string; onClick: () => void; children: Re
       disabled={p.disabled}
       onClick={p.onClick}
       className={`inline-flex size-7 items-center justify-center rounded text-sm disabled:opacity-30 ${
-        p.tone === "danger" ? "text-slate-400 hover:bg-red-50 hover:text-red-600" : "text-slate-500 hover:bg-slate-100 hover:text-ink"
+        p.tone === "danger" ? "text-slate-500 hover:bg-red-50 hover:text-red-600" : "text-slate-500 hover:bg-slate-100 hover:text-ink"
       }`}
     >
       {p.children}
@@ -183,7 +183,7 @@ export function ListEditor<T>(p: {
       {p.items.map((item, i) => (
         <div key={i} className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
               {p.itemLabel} {i + 1}
             </span>
             <div className="flex">

@@ -285,7 +285,7 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
                   value={expiresAt ? expiresAt.slice(0, 10) : ""}
                   onChange={(e) => setExpiresAt(e.target.value ? new Date(`${e.target.value}T23:59:59`).toISOString() : null)}
                 />
-                <span className="mt-1 block font-normal text-slate-400">Defaults to 30 days after publishing if left blank.</span>
+                <span className="mt-1 block font-normal text-slate-500">Defaults to 30 days after publishing if left blank.</span>
               </label>
             </div>
           </SidebarCard>

@@ -30,6 +30,8 @@ import { onAiDraftCreated, onAiPublished } from "../../services/notify.js";
 import { createPreviewUrl } from "../../services/preview.js";
 import { getWorkspaceContext } from "../../services/workspace.js";
 import { openApiDocument } from "./openapi.js";
+import { exportAll } from "../../services/export.js";
+import { getDashboardStats } from "../../services/stats.js";
 import { consentKey, type PendingConsent } from "../oauth.js";
 import { ApiError } from "../../lib/errors.js";
 import * as clients from "../../services/clients.js";
@@ -55,6 +57,8 @@ export const v1 = new Hono<AppEnv>()
   // Public: the OpenAPI description (for ChatGPT Actions, Zapier)
   .get("/openapi.json", (c) => c.json(openApiDocument(c.env.APP_URL)))
   .use(requireAuth)
+
+  .get("/stats", async (c) => c.json(await getDashboardStats(ctx(c))))
 
   // AI helpers (mirrors of MCP tools)
   .get("/workspace/context", async (c) => c.json(await getWorkspaceContext(ctx(c))))
@@ -166,6 +170,11 @@ export const v1 = new Hono<AppEnv>()
   .delete("/templates/:id", requireHuman, async (c) => {
     await templates.deleteTemplate(ctx(c), id(c));
     return c.body(null, 204);
+  })
+
+  .get("/export", requireHuman, async (c) => {
+    c.header("Content-Disposition", `attachment; filename="bridger-proposals-export.json"`);
+    return c.json(await exportAll(ctx(c)));
   })
 
   // Settings → AI & API (owner only)

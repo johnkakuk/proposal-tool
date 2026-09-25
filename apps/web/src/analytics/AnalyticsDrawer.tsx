@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 import { relativeTime } from "../components/ui";
-import { duration, type Analytics, type AuditEvent, type Device, type SessionDetail, type VersionSummary } from "./types";
+import { diffVersions } from "./diff";
+import { duration, type Analytics, type AuditEvent, type Device, type SessionDetail, type VersionDetail, type VersionSummary } from "./types";
 
 /** What the editor canvas should show while the drawer is open. */
 export type CanvasView = { kind: "heatmap"; version: number; device: Device; heat: { kind: "clicks" | "moves"; sessionId?: string; opacity: number } } | { kind: "version"; version: number; device: Device } | null;
@@ -30,7 +31,7 @@ export function AnalyticsDrawer({ proposalId, currentVersion, onClose, onCanvas 
     <aside aria-label="Analytics" className="flex w-full shrink-0 flex-col border-l border-slate-200 bg-white lg:sticky lg:top-[57px] lg:h-[calc(100vh-57px)] lg:w-[26rem]">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <h2 className="font-semibold">Analytics</h2>
-        <button type="button" onClick={onClose} aria-label="Close analytics" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-ink">
+        <button type="button" onClick={onClose} aria-label="Close analytics" className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-ink">
           ✕
         </button>
       </div>
@@ -66,7 +67,7 @@ export function AnalyticsDrawer({ proposalId, currentVersion, onClose, onCanvas 
         ) : tab === "Audit trail" ? (
           <Audit proposalId={proposalId} />
         ) : (
-          <Versions versions={versions.data ?? []} onCanvas={onCanvas} />
+          <Versions proposalId={proposalId} versions={versions.data ?? []} onCanvas={onCanvas} />
         )}
       </div>
     </aside>
@@ -370,10 +371,12 @@ function Audit({ proposalId }: { proposalId: string }) {
   );
 }
 
-function Versions({ versions, onCanvas }: { versions: VersionSummary[]; onCanvas: (v: CanvasView) => void }) {
+function Versions({ proposalId, versions, onCanvas }: { proposalId: string; versions: VersionSummary[]; onCanvas: (v: CanvasView) => void }) {
   const [viewing, setViewing] = useState<number | null>(null);
   if (versions.length === 0) return <Empty>Versions appear here each time you publish.</Empty>;
   return (
+    <div className="space-y-5">
+    {versions.length > 1 && <Compare proposalId={proposalId} versions={versions} />}
     <ul className="space-y-2 text-sm">
       {versions.map((v) => (
         <li key={v.version} className={`flex items-center justify-between rounded-lg border p-3 ${viewing === v.version ? "border-brand bg-brand/5" : "border-slate-200"}`}>
@@ -382,7 +385,7 @@ function Versions({ versions, onCanvas }: { versions: VersionSummary[]; onCanvas
               Version {v.version} <span className="font-normal capitalize text-slate-500">· {v.reason}</span>
             </div>
             <div className="text-xs text-slate-500">{when(v.created_at)}</div>
-            <div className="font-mono text-[10px] text-slate-400" title="SHA-256 of the version's content and pricing">
+            <div className="font-mono text-[10px] text-slate-500" title="SHA-256 of the version's content and pricing">
               {v.content_hash.slice(0, 16)}…
             </div>
           </div>
@@ -400,5 +403,65 @@ function Versions({ versions, onCanvas }: { versions: VersionSummary[]; onCanvas
         </li>
       ))}
     </ul>
+    </div>
+  );
+}
+
+const KIND_STYLE = { added: "bg-emerald-100 text-emerald-900", removed: "bg-red-100 text-red-900", changed: "bg-amber-100 text-amber-900", moved: "bg-slate-100 text-slate-700" } as const;
+
+/** Compare two versions: blocks and prices that changed (SPEC §7.3 nice-to-have). */
+function Compare({ proposalId, versions }: { proposalId: string; versions: VersionSummary[] }) {
+  const [from, setFrom] = useState(versions[1]!.version);
+  const [to, setTo] = useState(versions[0]!.version);
+  const load = (v: number) => ({ queryKey: ["version", proposalId, v], queryFn: () => api<VersionDetail>(`/proposals/${proposalId}/versions/${v}`), staleTime: Infinity });
+  const a = useQuery(load(from));
+  const b = useQuery(load(to));
+  const diff = a.data && b.data ? diffVersions(a.data, b.data) : null;
+  const select = "rounded-md border border-slate-300 bg-white px-2 py-1 text-sm";
+  const changes = diff ? [...diff.blocks.map((c) => ({ ...c, detail: undefined as string | undefined, area: "Content" })), ...diff.pricing.map((c) => ({ ...c, area: "Pricing" }))] : [];
+  return (
+    <section aria-label="Compare versions" className="rounded-lg border border-slate-200 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-medium">Compare</span>
+        <select aria-label="Compare from version" className={select} value={from} onChange={(e) => setFrom(Number(e.target.value))}>
+          {versions.map((v) => (
+            <option key={v.version} value={v.version}>
+              v{v.version}
+            </option>
+          ))}
+        </select>
+        <span aria-hidden>→</span>
+        <select aria-label="Compare to version" className={select} value={to} onChange={(e) => setTo(Number(e.target.value))}>
+          {versions.map((v) => (
+            <option key={v.version} value={v.version}>
+              v{v.version}
+            </option>
+          ))}
+        </select>
+      </div>
+      {!diff ? (
+        <p className="mt-2 text-xs text-slate-500">Loading…</p>
+      ) : changes.length === 0 && !diff.totals ? (
+        <p className="mt-2 text-xs text-slate-500">No differences.</p>
+      ) : (
+        <ul className="mt-3 space-y-1.5 text-xs" aria-label="Differences">
+          {diff.totals && (
+            <li className="font-medium">
+              Total: {diff.totals.before} → {diff.totals.after}
+            </li>
+          )}
+          {changes.map((c, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className={`shrink-0 rounded px-1.5 py-0.5 font-medium capitalize ${KIND_STYLE[c.kind]}`}>{c.kind}</span>
+              <span>
+                <span className="text-slate-500">{c.area}: </span>
+                {c.label}
+                {c.detail && <span className="text-slate-500"> · {c.detail}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

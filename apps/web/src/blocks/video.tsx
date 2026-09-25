@@ -32,7 +32,7 @@ function VideoRenderer({ props }: { props: { url: string; caption?: string } }) 
   return (
     <figure className="mx-auto max-w-3xl">
       {!embed ? (
-        <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-400">Add a YouTube, Vimeo, or Loom link</div>
+        <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-500">Add a YouTube, Vimeo, or Loom link</div>
       ) : mode === "print" ? (
         <a href={props.url}>{props.url}</a>
       ) : (
@@ -41,7 +41,7 @@ function VideoRenderer({ props }: { props: { url: string; caption?: string } }) 
           <iframe src={embed} title={props.caption ?? "Video"} className={`size-full ${mode === "editor" ? "pointer-events-none" : ""}`} allow="fullscreen; picture-in-picture" loading="lazy" />
         </div>
       )}
-      {props.caption && <figcaption className="mt-2 text-center text-sm opacity-70">{props.caption}</figcaption>}
+      {props.caption && <figcaption className="mt-2 text-center text-sm text-(--color-muted)">{props.caption}</figcaption>}
     </figure>
   );
 }

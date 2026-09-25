@@ -11,9 +11,9 @@ export const image: BlockUI<"image"> = {
       {props.url ? (
         <img src={props.url} alt={props.alt} className="w-full rounded-lg" />
       ) : (
-        <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-400">Add an image URL</div>
+        <div className="flex aspect-video items-center justify-center rounded-lg bg-slate-100 text-sm text-slate-500">Add an image URL</div>
       )}
-      {props.caption && <figcaption className="mt-2 text-center text-sm opacity-70">{props.caption}</figcaption>}
+      {props.caption && <figcaption className="mt-2 text-center text-sm text-(--color-muted)">{props.caption}</figcaption>}
     </figure>
   ),
   Editor: ({ props, onChange }) => (

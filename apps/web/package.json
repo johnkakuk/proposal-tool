@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p functions/tsconfig.json",
-    "pages:dev": "vite build && wrangler pages dev dist --port 8788"
+    "pages:dev": "vite build && wrangler pages dev dist --port 8788",
+    "deploy": "vite build --mode production && wrangler pages deploy dist --project-name bridger-proposals-web --branch main"
   },
   "dependencies": {
     "@bridger/shared": "workspace:*",

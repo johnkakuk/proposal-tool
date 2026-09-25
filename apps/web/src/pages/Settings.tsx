@@ -4,13 +4,27 @@ import { useState } from "react";
 import { Button, ErrorNote, Spinner, inputClass } from "../components/ui";
 import { api } from "../lib/api";
 import { AiSettings } from "./AiSettings";
+import { BrandSettings, DefaultsSettings, Section, SignatureSettings, SigningSettings } from "./GeneralSettings";
+import { downloadJson } from "../lib/api";
+import { useToast } from "../components/Toaster";
 import { supabase } from "../lib/supabase";
 
 /**
- * Settings (SPEC §7.6). Phase 5 ships Notifications; brand, signature, signing, tracking,
- * and AI settings join here in later phases. Settings are plain CRUD, written directly
- * through RLS.
+ * Settings (SPEC §7.6): brand & company, defaults, signature, signing, notifications,
+ * AI & API, tracking, and data export. Settings are plain CRUD, written directly through
+ * RLS; credentials (API keys, connections) go through the Worker.
  */
+
+const NAV = [
+  ["brand", "Brand & company"],
+  ["defaults", "Proposal defaults"],
+  ["signature", "Your signature"],
+  ["signing", "Signing"],
+  ["notifications", "Notifications"],
+  ["ai", "AI & API"],
+  ["tracking", "Tracking"],
+  ["export", "Data export"],
+] as const;
 
 const NOTIFICATIONS: { key: OwnerNotificationType; label: string; hint: string }[] = [
   { key: "first_view", label: "First view", hint: "When a client first spends 5+ seconds on a proposal" },
@@ -46,9 +60,25 @@ export function Settings() {
   });
 
   return (
-    <>
-      <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
-      <section className="max-w-2xl rounded-xl bg-white p-6 shadow-xs ring-1 ring-slate-200">
+    <div className="lg:grid lg:grid-cols-[12rem_1fr] lg:gap-8">
+      <nav aria-label="Settings sections" className="mb-6 lg:sticky lg:top-6 lg:mb-0 lg:self-start">
+        <h1 className="mb-4 text-2xl font-semibold">Settings</h1>
+        <ul className="flex flex-wrap gap-1 lg:flex-col">
+          {NAV.map(([id, label]) => (
+            <li key={id}>
+              <a href={`#${id}`} className="block rounded-md px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 hover:text-ink">
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div>
+      <BrandSettings />
+      <DefaultsSettings />
+      <SignatureSettings />
+      <SigningSettings />
+      <section id="notifications" className="mt-6 max-w-2xl scroll-mt-6 rounded-xl bg-white p-6 shadow-xs ring-1 ring-slate-200">
         <h2 className="font-semibold">Email notifications</h2>
         <p className="mt-1 text-sm text-slate-500">Emails you get about your proposals. Emails to clients (sent proposals, signing codes, signed copies) always go out.</p>
         <ErrorNote error={prefs.error ?? save.error} />
@@ -81,9 +111,40 @@ export function Settings() {
           </ul>
         )}
       </section>
-      <AiSettings />
-      <TrackingSettings />
-    </>
+      <div id="ai" className="scroll-mt-6">
+        <AiSettings />
+      </div>
+      <div id="tracking" className="scroll-mt-6">
+        <TrackingSettings />
+      </div>
+      <ExportSettings />
+      </div>
+    </div>
+  );
+}
+
+function ExportSettings() {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  return (
+    <Section id="export" title="Data export" description="Everything in one JSON file: proposals with their versions and signature records, clients, templates, and settings.">
+      <Button
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await downloadJson("/export", `bridger-proposals-export-${new Date().toISOString().slice(0, 10)}.json`);
+            toast("Export downloaded");
+          } catch (e) {
+            toast(e instanceof Error ? e.message : "Export failed");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Preparing…" : "Download all data (JSON)"}
+      </Button>
+    </Section>
   );
 }
 
@@ -151,7 +212,7 @@ function TrackingSettings() {
               {ips.data?.ips.map((ip) => (
                 <li key={ip} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-1.5 font-mono text-sm">
                   {ip}
-                  <button type="button" aria-label={`Remove ${ip}`} onClick={() => saveIps.mutate(ips.data!.ips.filter((x) => x !== ip))} className="text-slate-400 hover:text-red-600">
+                  <button type="button" aria-label={`Remove ${ip}`} onClick={() => saveIps.mutate(ips.data!.ips.filter((x) => x !== ip))} className="text-slate-500 hover:text-red-600">
                     ✕
                   </button>
                 </li>

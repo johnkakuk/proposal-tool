@@ -49,3 +49,12 @@ export async function downloadFromApi(path: string, fallbackName: string): Promi
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+/** GETs JSON from the Worker and saves it as a file. */
+export async function downloadJson(path: string, filename: string): Promise<void> {
+  const data = await api<unknown>(path);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}

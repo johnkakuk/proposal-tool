@@ -67,7 +67,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
             <h2 id={titleId} className="text-lg font-semibold">
               {title}
             </h2>
-            <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-ink">
+            <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-ink">
               ✕
             </button>
           </div>

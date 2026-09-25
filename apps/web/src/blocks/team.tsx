@@ -10,8 +10,8 @@ export const team: BlockUI<"team"> = {
         <div key={i} className="text-center">
           {m.photoUrl ? <img src={m.photoUrl} alt={m.name} className="mx-auto size-28 rounded-full object-cover" /> : <div className="mx-auto size-28 rounded-full bg-slate-200" />}
           <h3 className="mt-3 font-semibold">{m.name}</h3>
-          <p className="text-sm opacity-70">{m.role}</p>
-          {m.bio && <p className="mt-2 text-sm opacity-80">{m.bio}</p>}
+          <p className="text-sm text-(--color-muted)">{m.role}</p>
+          {m.bio && <p className="mt-2 text-sm text-(--color-muted)">{m.bio}</p>}
         </div>
       ))}
     </div>

@@ -22,7 +22,7 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 `@bridger/shared` is source-only (`exports` points at `src/index.ts`). Vite, Wrangler, and Vitest bundle it directly, with no build step.
 
 ## Data access model
-- **Browser:** anon key + John's JWT, limited by RLS to `owner_id = auth.uid()`. It reads settings directly. All writes (proposals, templates, clients) go through the Worker's `/api/v1/*` with the JWT in `Authorization: Bearer`. The only exception is settings, which the Settings screen (Phase 8) may write directly.
+- **Browser:** anon key + John's JWT, limited by RLS to `owner_id = auth.uid()`. It reads settings directly. All writes (proposals, templates, clients) go through the Worker's `/api/v1/*` with the JWT in `Authorization: Bearer`. The only exception is settings, which the Settings screen writes directly (brand, defaults, owner signature, signing, notifications, AI, tracking).
 - **Worker:** `middleware/auth.ts` verifies Supabase JWTs (JWKS for ES256/RS256; HS256 via `SUPABASE_JWT_SECRET` on legacy projects). Routes validate input with shared Zod schemas (`schemas/api.ts`), then call `apps/api/src/services/*` with a `ServiceContext`. Services use the service role, so **every query must filter by `ownerId`**. REST, MCP, and admin actions share these services, so no logic is duplicated.
 - **Autosave** sends `baseUpdatedAt`. The server rejects stale writes with 409 `conflict` and signed proposals with 409 `locked`. `edited` audit events are coalesced to one per 15 minutes.
 - **anon role:** no table access. The public viewer only talks to the Worker.
@@ -90,6 +90,16 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - **Permissions:** `ai_can_publish` / `ai_can_email_client` are enforced in `publish.ts` / `sendProposal.ts` for automated callers. AI creates and publishes notify John.
 - **OpenAPI 3.1** is at `/api/v1/openapi.json`, generated from the shared Zod schemas.
 - **Tests:** integration tests run `provider.fetch` in-process with an in-memory KV. `cloudflare:workers` is aliased to a stub, and the OAuth package is inlined in vitest. E2E runs the real runtime via `wrangler dev`. The login helper waits for the persisted Supabase session before any full page load.
+
+## Theming & accessibility
+- Brand colors are John's choice, so `themeToCssVars` (shared `schemas/theme.ts`) derives legible text tokens from them (WCAG AA 4.5:1): `--color-on-primary` / `--color-on-accent` for text on fills, `--color-primary-text` / `--color-accent-text` / `--color-accent-on-primary` for colored text, and `--color-muted` for secondary text. **Never put `text-white` on a brand fill or use opacity for secondary text in blocks/public UI**; use the tokens. Emails use `textOn` / `readableOn` the same way.
+- Portaled UI (`PublicModal`) sits outside the `ThemeScope` div, so it gets the variables through `useThemeVars()`.
+- Admin UI: secondary text is `text-slate-500` minimum (never `-400`). `e2e/a11y.spec.ts` runs axe (WCAG 2.1 A/AA) on the main screens and fails on serious or critical violations.
+- Route errors (including stale chunks after a deploy) render `RouteError`.
+
+## Deployment
+- Step by step: `docs/DEPLOYMENT.md`. `pnpm deploy:db` / `deploy:api` / `deploy:web` / `deploy:all`. Don't name a script plain `deploy` at the root, because `pnpm deploy` is a built-in.
+- The production web build reads `apps/web/.env.production.local`.
 
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.

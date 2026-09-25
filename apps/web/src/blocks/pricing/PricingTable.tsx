@@ -12,7 +12,7 @@ export function PricingTable({ sectionIds, showTotals }: { sectionIds: string[];
     return section && computed ? [{ section, computed }] : [];
   });
 
-  if (sections.length === 0) return <p className="rounded-lg border border-dashed border-black/20 p-6 text-center text-sm opacity-60">No pricing yet.</p>;
+  if (sections.length === 0) return <p className="rounded-lg border border-dashed border-black/20 p-6 text-center text-sm text-(--color-muted)">No pricing yet.</p>;
 
   return (
     <div className="space-y-8">
@@ -36,8 +36,8 @@ function Section({ section, computed, selected, onSelect }: { section: PricingSe
     <section>
       <header className="mb-3">
         <h3 className="font-(family-name:--font-heading) text-xl font-bold">{section.title}</h3>
-        {section.mode === "optional" && <p className="text-sm opacity-60">Optional add-ons{interactive ? ": choose any" : ""}</p>}
-        {section.mode === "choose_one" && <p className="text-sm opacity-60">Choose one</p>}
+        {section.mode === "optional" && <p className="text-sm text-(--color-muted)">Optional add-ons{interactive ? ": choose any" : ""}</p>}
+        {section.mode === "choose_one" && <p className="text-sm text-(--color-muted)">Choose one</p>}
         {section.description && <Markdown className="mt-1 text-sm">{section.description}</Markdown>}
       </header>
 
@@ -58,11 +58,11 @@ function Section({ section, computed, selected, onSelect }: { section: PricingSe
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-semibold">{line.name}</span>
-                  {on && <span className="rounded-full bg-(--color-accent) px-2 py-0.5 text-xs font-semibold text-white">Selected</span>}
+                  {on && <span className="rounded-full bg-(--color-accent) px-2 py-0.5 text-xs font-semibold text-(--color-on-accent)">Selected</span>}
                 </div>
                 <div className="mt-2 text-2xl font-bold tabular-nums">{money(line.totalCents, line.billing)}</div>
-                {line.discount && <div className="text-sm line-through opacity-50">{money(line.subtotalCents, line.billing)}</div>}
-                {item.description && <Markdown className="mt-2 text-sm opacity-80">{item.description}</Markdown>}
+                {line.discount && <div className="text-sm line-through text-(--color-muted)">{money(line.subtotalCents, line.billing)}</div>}
+                {item.description && <Markdown className="mt-2 text-sm text-(--color-muted)">{item.description}</Markdown>}
               </button>
             );
           })}
@@ -74,27 +74,27 @@ function Section({ section, computed, selected, onSelect }: { section: PricingSe
             const on = selected.has(line.itemId);
             const muted = section.mode === "optional" && !on;
             return (
-              <li key={line.itemId} className={`flex gap-3 p-4 ${muted ? "opacity-60" : ""}`}>
+              <li key={line.itemId} className={`flex gap-3 p-4 ${muted ? "text-(--color-muted)" : ""}`}>
                 {section.mode === "optional" && (
                   <input type="checkbox" className="mt-1 size-4 accent-(--color-accent)" checked={on} disabled={!interactive} onChange={() => toggle(line.itemId)} aria-label={`Add ${line.name}`} />
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{line.name}</div>
-                  {item.description && <Markdown className="text-sm opacity-80">{item.description}</Markdown>}
+                  {item.description && <Markdown className="text-sm text-(--color-muted)">{item.description}</Markdown>}
                   {(line.quantity !== 1 || item.unitLabel) && (
-                    <div className="text-sm tabular-nums opacity-60">
+                    <div className="text-sm tabular-nums text-(--color-muted)">
                       {formatQuantity(line.quantity)}
                       {item.unitLabel ? ` ${item.unitLabel}` : ""} × {money(line.unitPriceCents)}
                     </div>
                   )}
                   {line.discount && line.discount.amountCents > 0 && (
-                    <div className="text-sm text-(--color-accent)">
+                    <div className="text-sm text-(--color-accent-text)">
                       −{money(line.discount.amountCents)} {line.discount.label}
                     </div>
                   )}
                 </div>
                 <div className="text-right font-semibold tabular-nums">
-                  {line.discount && line.discount.amountCents > 0 && <div className="text-sm font-normal line-through opacity-50">{money(line.subtotalCents, line.billing)}</div>}
+                  {line.discount && line.discount.amountCents > 0 && <div className="text-sm font-normal line-through text-(--color-muted)">{money(line.subtotalCents, line.billing)}</div>}
                   {money(line.totalCents, line.billing)}
                 </div>
               </li>
@@ -104,7 +104,7 @@ function Section({ section, computed, selected, onSelect }: { section: PricingSe
       )}
 
       {computed.discounts.filter((d) => d.amountCents > 0).map((d) => (
-        <div key={d.discountId} className="mt-2 flex justify-between px-4 text-sm text-(--color-accent)">
+        <div key={d.discountId} className="mt-2 flex justify-between px-4 text-sm text-(--color-accent-text)">
           <span>{d.label}</span>
           <span className="tabular-nums">−{money(d.amountCents)}</span>
         </div>
@@ -121,7 +121,7 @@ function Totals({ result, notes }: { result: PricingResult; notes?: string }) {
         <dl className="mb-3 space-y-1 border-b border-black/10 pb-3 text-sm">
           <Row label="Subtotal" amounts={result.subtotal} />
           {result.discounts.filter((d) => d.amountCents > 0).map((d) => (
-            <Row key={d.discountId} label={d.label} amounts={d.byCadence} negative className="text-(--color-accent)" />
+            <Row key={d.discountId} label={d.label} amounts={d.byCadence} negative className="text-(--color-accent-text)" />
           ))}
           {result.tax && <Row label={`Tax (${result.tax.ratePct}%)`} amounts={result.tax.byCadence} />}
         </dl>
@@ -129,7 +129,7 @@ function Totals({ result, notes }: { result: PricingResult; notes?: string }) {
       <dl>
         <Row label="Total" amounts={result.total} className="text-lg font-bold" />
       </dl>
-      {notes && <Markdown className="mt-3 text-sm opacity-70">{notes}</Markdown>}
+      {notes && <Markdown className="mt-3 text-sm text-(--color-muted)">{notes}</Markdown>}
     </div>
   );
 }

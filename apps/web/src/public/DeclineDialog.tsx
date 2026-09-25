@@ -23,7 +23,7 @@ export function DeclineDialog({ slug, open, onClose, onDeclined }: { slug: strin
           }
         }}
       >
-        <p className="opacity-80">We'd appreciate knowing why, so we can do better. This is optional.</p>
+        <p className="text-(--color-muted)">We'd appreciate knowing why, so we can do better. This is optional.</p>
         <label className="block text-sm font-medium">
           Reason (optional)
           <textarea rows={3} maxLength={2000} className={publicInput} value={reason} onChange={(e) => setReason(e.target.value)} />

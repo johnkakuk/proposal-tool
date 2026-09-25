@@ -11,12 +11,12 @@ export const timeline: BlockUI<"timeline"> = {
           <span className="absolute -left-[33px] flex size-4 items-center justify-center rounded-full bg-(--color-accent) ring-4 ring-(--color-background)" />
           <div className="flex flex-wrap items-baseline gap-x-3">
             <h3 className="font-semibold">{p.title}</h3>
-            {p.duration && <span className="text-sm opacity-60">{p.duration}</span>}
+            {p.duration && <span className="text-sm text-(--color-muted)">{p.duration}</span>}
           </div>
-          {p.description && <p className="mt-1 text-sm opacity-80">{p.description}</p>}
+          {p.description && <p className="mt-1 text-sm text-(--color-muted)">{p.description}</p>}
         </li>
       ))}
-      {props.phases.length === 0 && <li className="text-sm opacity-50">No phases yet.</li>}
+      {props.phases.length === 0 && <li className="text-sm text-(--color-muted)">No phases yet.</li>}
     </ol>
   ),
   Editor: ({ props, onChange }) => (

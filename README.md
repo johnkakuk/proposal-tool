@@ -18,7 +18,11 @@ Everything runs on free tiers: Cloudflare Pages + Workers, Supabase, and Resend.
 | 5 | Email | ✅ Done |
 | 6 | Tracking & analytics | ✅ Done |
 | 7 | AI (MCP + REST) | ✅ Done |
-| 8 | Polish & deployment docs | — |
+| 8 | Polish & deployment docs | ✅ Done |
+
+## Deploying
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the step-by-step setup of Supabase, Resend, the Worker, and Pages, plus first-run checks for the Claude.ai and ChatGPT connectors. After that, `pnpm deploy:all` ships migrations, the Worker, and the web app.
 
 ## Stack
 
@@ -53,9 +57,10 @@ Type into the document the way you'd write Markdown: `## ` makes a heading, `- `
 | `pnpm dev` | Runs the Worker and the Vite dev server together. Vite proxies `/api`, `/mcp`, `/oauth`, `/.well-known`, and `/t` to the Worker, so the app runs on one origin. |
 | `pnpm test` | Runs all unit and database tests. The database tests use PGlite and don't need Docker. |
 | `pnpm test:integration` | Runs Worker API tests against the local Supabase stack. |
-| `pnpm test:e2e` | Runs Playwright browser tests against the full local stack (starts the dev servers if they aren't running). |
+| `pnpm test:e2e` | Runs Playwright browser tests against the full local stack (starts the dev servers if they aren't running), including an axe accessibility audit (`e2e/a11y.spec.ts`). |
 | `pnpm typecheck` | Type-checks every package. |
 | `pnpm db:start` / `pnpm db:reset` | Starts local Supabase / re-applies migrations and seeds. |
+| `pnpm deploy:db` / `deploy:api` / `deploy:web` / `deploy:all` | Deploys migrations, the Worker, the web app, or all three ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)). |
 | `pnpm gen:seed` | Regenerates the starter-template seed from `scripts/starter-templates.ts`. |
 
 ## Repository layout

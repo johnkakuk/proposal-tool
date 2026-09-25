@@ -6,6 +6,9 @@ import { NewProposalDialog } from "../components/NewProposalDialog";
 import { ProposalMenu } from "../components/RowMenus";
 import { Button, EmptyState, ErrorNote, Spinner, StatusChip, inputClass, relativeTime, shortDate } from "../components/ui";
 import { useProposals } from "../lib/queries";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../lib/api";
+import { formatCents } from "@bridger/shared";
 
 /** Pipeline list (SPEC §7.1). Stats, view counts, and date filters arrive with later phases. */
 export function Dashboard() {
@@ -22,6 +25,8 @@ export function Dashboard() {
           + New proposal
         </Button>
       </div>
+
+      <StatRow />
 
       <div className="mb-4 flex flex-wrap gap-2 [&>*]:w-auto">
         <input aria-label="Search proposals" placeholder="Search by title…" className={`${inputClass} max-w-xs`} value={q} onChange={(e) => setQ(e.target.value)} />
@@ -95,5 +100,47 @@ export function Dashboard() {
       )}
       <NewProposalDialog open={creating} onClose={() => setCreating(false)} />
     </>
+  );
+}
+
+interface Stats {
+  sentLast30: number;
+  openRate30: number | null;
+  winRate90: number | null;
+  signedThisMonth: { count: number; oneTimeCents: number; monthlyCents: number };
+  avgTimeToSignMs: number | null;
+}
+
+const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
+const days = (ms: number | null) => {
+  if (ms === null) return "—";
+  const d = ms / 86_400_000;
+  return d < 1 ? `${Math.max(1, Math.round(d * 24))} h` : `${d < 10 ? d.toFixed(1) : Math.round(d)} days`;
+};
+
+/** KPI row (SPEC §7.1). Each tile names its period. */
+function StatRow() {
+  const { data } = useQuery({ queryKey: ["stats"], queryFn: () => api<Stats>("/stats") });
+  const tiles: { label: string; value: string; sub: string }[] = [
+    { label: "Sent", value: data ? String(data.sentLast30) : "…", sub: "last 30 days" },
+    { label: "Open rate", value: data ? pct(data.openRate30) : "…", sub: "of those sent, last 30 days" },
+    { label: "Win rate", value: data ? pct(data.winRate90) : "…", sub: "signed, of sent in 90 days" },
+    {
+      label: "Signed this month",
+      value: data ? formatCents(data.signedThisMonth.oneTimeCents) : "…",
+      sub: data ? `${data.signedThisMonth.monthlyCents ? `+ ${formatCents(data.signedThisMonth.monthlyCents)}/mo · ` : ""}${data.signedThisMonth.count} signed` : "",
+    },
+    { label: "Avg. time to sign", value: data ? days(data.avgTimeToSignMs) : "…", sub: "from sending, last 90 days" },
+  ];
+  return (
+    <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-label="Pipeline stats">
+      {tiles.map((t) => (
+        <div key={t.label} className="rounded-xl bg-white p-4 shadow-xs ring-1 ring-slate-200">
+          <dt className="text-xs font-medium text-slate-500">{t.label}</dt>
+          <dd className="mt-1 text-2xl font-semibold tabular-nums text-ink">{t.value}</dd>
+          <dd className="text-xs text-slate-500">{t.sub}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

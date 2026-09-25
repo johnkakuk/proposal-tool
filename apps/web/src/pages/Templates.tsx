@@ -36,12 +36,12 @@ export function Templates() {
               <div className="mb-3 flex aspect-[16/7] items-center justify-center rounded-lg bg-gradient-to-br from-brand to-brand/70 px-4 text-center font-semibold text-white">
                 {t.name}
               </div>
-              {t.category && <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{t.category}</span>}
+              {t.category && <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{t.category}</span>}
               <Link to={`/app/templates/${t.id}`} className="font-medium hover:text-brand hover:underline">
                 {t.name}
               </Link>
               {t.description && <p className="mt-1 line-clamp-2 text-sm text-slate-500">{t.description}</p>}
-              <div className="mt-auto flex items-center justify-between pt-4 text-xs text-slate-400">
+              <div className="mt-auto flex items-center justify-between pt-4 text-xs text-slate-500">
                 <span>Updated {relativeTime(t.updated_at)}</span>
                 <TemplateMenu template={t} />
               </div>

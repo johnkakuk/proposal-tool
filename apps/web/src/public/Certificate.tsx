@@ -29,7 +29,7 @@ export function useHashCheck(cert: PublicCertificate | undefined): Check {
 export function CertificateDetails({ cert, check }: { cert: PublicCertificate; check?: Check }) {
   const row = (label: string, value: React.ReactNode, mono = false) => (
     <div className="grid gap-1 py-2 sm:grid-cols-[12rem_1fr]">
-      <dt className="text-sm opacity-60">{label}</dt>
+      <dt className="text-sm text-(--color-muted)">{label}</dt>
       <dd className={mono ? "font-mono text-xs break-all" : ""}>{value}</dd>
     </div>
   );
@@ -65,7 +65,7 @@ export function CertificateDetails({ cert, check }: { cert: PublicCertificate; c
         <>
           <h3 className="mt-6 mb-2 font-semibold">Audit trail</h3>
           <table className="w-full text-left text-sm">
-            <thead className="opacity-60">
+            <thead className="text-(--color-muted)">
               <tr>
                 <th className="py-1 font-medium">Event</th>
                 <th className="py-1 font-medium">Time</th>
@@ -84,7 +84,7 @@ export function CertificateDetails({ cert, check }: { cert: PublicCertificate; c
           </table>
         </>
       )}
-      <p className="mt-6 text-xs opacity-60">
+      <p className="mt-6 text-xs text-(--color-muted)">
         The document hash is the SHA-256 of the signed record (proposal content, pricing, the client's selections and totals, signer details, and consent) in RFC 8785 canonical JSON. Anyone
         can recompute it on the verification page. Signed electronically in accordance with the U.S. ESIGN Act and UETA.
       </p>

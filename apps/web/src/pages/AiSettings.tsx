@@ -40,6 +40,20 @@ function Switch({ label, hint, checked, onChange, disabled }: { label: string; h
   );
 }
 
+function CopyRow({ label, hint, value }: { label: string; hint: string; value: string }) {
+  const toast = useToast();
+  return (
+    <div>
+      <dt className="font-medium">{label}</dt>
+      <dd className="text-xs text-slate-500">{hint}</dd>
+      <dd className="mt-1 flex gap-2">
+        <input readOnly aria-label={`${label} URL`} className={`${inputClass} font-mono text-xs`} value={value} onFocus={(e) => e.target.select()} />
+        <Button onClick={() => void navigator.clipboard.writeText(value).then(() => toast("Copied"))}>Copy</Button>
+      </dd>
+    </div>
+  );
+}
+
 /** Settings → AI & API (SPEC §7.6). */
 export function AiSettings() {
   const qc = useQueryClient();
@@ -117,6 +131,12 @@ export function AiSettings() {
           </div>
         </div>
       )}
+
+      <h3 className="mt-6 text-sm font-semibold">Connect an app</h3>
+      <dl className="mt-2 space-y-2 text-sm">
+        <CopyRow label="MCP server" hint="Claude.ai and ChatGPT: add as a custom connector, then sign in." value={`${window.location.origin}/mcp`} />
+        <CopyRow label="OpenAPI" hint="Custom GPT Actions and Zapier: import, then use an API key below." value={`${window.location.origin}/api/v1/openapi.json`} />
+      </dl>
 
       <h3 className="mt-6 text-sm font-semibold">Connected apps</h3>
       <p className="text-xs text-slate-500">Claude.ai, ChatGPT, and other apps you've connected by signing in.</p>

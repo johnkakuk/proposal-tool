@@ -100,7 +100,7 @@ export function ObjectNodeView({ node, editor, getPos, updateAttributes, deleteN
             data-object-toolbar
             className={`absolute -top-4 right-2 z-10 flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white px-1 py-0.5 shadow-sm transition ${selected || editing ? "opacity-100" : "opacity-0 group-hover/object:opacity-100 focus-within:opacity-100"}`}
           >
-            <span data-drag-handle draggable title="Drag to move" className="cursor-grab px-1 text-slate-400 active:cursor-grabbing" aria-hidden>
+            <span data-drag-handle draggable title="Drag to move" className="cursor-grab px-1 text-slate-500 active:cursor-grabbing" aria-hidden>
               ⋮⋮
             </span>
             <span className="px-1 text-xs font-medium text-slate-500">
@@ -154,7 +154,7 @@ export function ObjectNodeView({ node, editor, getPos, updateAttributes, deleteN
               <h3 className="text-sm font-semibold text-slate-700">
                 {ui.menu.icon} {label}
               </h3>
-              <span className="text-xs text-slate-400">Esc to close</span>
+              <span className="text-xs text-slate-500">Esc to close</span>
             </div>
             <ui.Editor
               blockId={blockId}
