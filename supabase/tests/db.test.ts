@@ -404,3 +404,88 @@ describe("purge_proposal", () => {
     );
   });
 });
+
+describe("tracking", () => {
+  async function session(proposalId: string, flags: { is_owner?: boolean; is_bot?: boolean } = {}) {
+    const { rows } = await db.query<{ id: string }>(
+      `insert into public.view_sessions (owner_id, proposal_id, version, visitor_id, device, ip_hash, is_owner, is_bot)
+       values ($1, $2, 1, 'v1', 'desktop', $3, $4, $5) returning id`,
+      [owner, proposalId, HASH, flags.is_owner ?? false, flags.is_bot ?? false],
+    );
+    return rows[0]!.id;
+  }
+  const ingest = (sid: string, blocks: unknown[], points: unknown[], pricing: unknown[], active: number, scroll: number) =>
+    db.query<{ active_ms_before: number; active_ms_after: number }>(`select * from public.ingest_tracking($1, $2, $3, $4, $5, $6)`, [
+      sid,
+      JSON.stringify(blocks),
+      JSON.stringify(points),
+      JSON.stringify(pricing),
+      active,
+      scroll,
+    ]);
+
+  it("accumulates block time, entries, active time, and max scroll across batches", async () => {
+    const pid = await insertProposal(owner, "sent");
+    const sid = await session(pid);
+    await ingest(sid, [{ blockId: "b1", visibleMsDelta: 2000, entered: true }], [], [], 3000, 40);
+    const r = await ingest(sid, [{ blockId: "b1", visibleMsDelta: 1500, entered: true }, { blockId: "b2", visibleMsDelta: 800, entered: true }], [], [], 2500, 30);
+    expect(r.rows[0]).toMatchObject({ active_ms_before: 3000, active_ms_after: 5500 });
+    const stats = (await db.query<{ block_id: string; visible_ms: number; times_entered: number }>(`select block_id, visible_ms::int, times_entered from public.session_block_stats where session_id = $1 order by block_id`, [sid])).rows;
+    expect(stats).toEqual([
+      { block_id: "b1", visible_ms: 3500, times_entered: 2 },
+      { block_id: "b2", visible_ms: 800, times_entered: 1 },
+    ]);
+    expect((await db.query<{ max_scroll_pct: number }>(`select max_scroll_pct from public.view_sessions where id = $1`, [sid])).rows[0]!.max_scroll_pct).toBe(40);
+  });
+
+  it("caps heatmap points at 3,000 per session, clamps coordinates, records pricing toggles", async () => {
+    const pid = await insertProposal(owner, "sent");
+    const sid = await session(pid);
+    const pts = (n: number) => Array.from({ length: n }, (_, i) => ({ blockId: "b1", kind: "click", x: i % 2 ? 1.7 : -0.2, y: 0.5 }));
+    await ingest(sid, [], pts(2500), [{ sectionId: "s", itemId: "i", action: "selected" }], 0, 0);
+    await ingest(sid, [], pts(900), [], 0, 0);
+    const { rows } = await db.query<{ n: number; minx: number; maxx: number }>(`select count(*)::int as n, min(x_pct) as minx, max(x_pct) as maxx from public.heatmap_points where session_id = $1`, [sid]);
+    expect(rows[0]).toEqual({ n: 3000, minx: 0, maxx: 1 });
+    expect((await db.query<{ n: number }>(`select count(*)::int as n from public.pricing_interactions where session_id = $1`, [sid])).rows[0]!.n).toBe(1);
+  });
+
+  it("stores no events for owner or bot sessions", async () => {
+    const pid = await insertProposal(owner, "sent");
+    for (const flags of [{ is_owner: true }, { is_bot: true }]) {
+      const sid = await session(pid, flags);
+      await ingest(sid, [{ blockId: "b1", visibleMsDelta: 5000, entered: true }], [{ blockId: "b1", kind: "click", x: 0.5, y: 0.5 }], [], 9000, 90);
+      const counts = await db.query<{ a: number; b: number; ms: number }>(
+        `select (select count(*)::int from public.session_block_stats where session_id = $1) as a,
+                (select count(*)::int from public.heatmap_points where session_id = $1) as b,
+                (select active_ms::int from public.view_sessions where id = $1) as ms`,
+        [sid],
+      );
+      expect(counts.rows[0]).toEqual({ a: 0, b: 0, ms: 0 });
+    }
+  });
+
+  it("rolls up old points into the grid and reads cells + fresh points together", async () => {
+    const pid = await insertProposal(owner, "sent");
+    const sid = await session(pid);
+    await ingest(sid, [], [{ blockId: "b1", kind: "click", x: 0.51, y: 0.02 }, { blockId: "b1", kind: "click", x: 0.519, y: 0.039 }, { blockId: "b1", kind: "move", x: 0.99, y: 1 }], [], 0, 0);
+    await db.query(`update public.heatmap_points set occurred_at = now() - interval '2 days' where session_id = $1`, [sid]);
+    await ingest(sid, [], [{ blockId: "b1", kind: "click", x: 0.5, y: 0.0 }], [], 0, 0); // fresh
+    await db.query(`select public.rollup_heatmaps()`);
+    const cells = (await db.query<{ cell_x: number; cell_y: number; count: number; kind: string }>(`select cell_x, cell_y, count, kind from public.heatmap_cells where proposal_id = $1 order by kind, cell_x`, [pid])).rows;
+    expect(cells).toEqual([
+      { cell_x: 25, cell_y: 1, count: 2, kind: "click" },
+      { cell_x: 49, cell_y: 49, count: 1, kind: "move" },
+    ]);
+    const grid = (await db.query<{ block_id: string; cell_x: number; cell_y: number; count: number }>(`select block_id, cell_x, cell_y, count::int from public.heatmap_grid($1, 1, 'desktop', array['click']::public.heatmap_kind[]) order by cell_y`, [pid])).rows;
+    expect(grid).toEqual([
+      { block_id: "b1", cell_x: 25, cell_y: 0, count: 1 },
+      { block_id: "b1", cell_x: 25, cell_y: 1, count: 2 },
+    ]);
+    // Re-running the rollup doesn't double count
+    await db.query(`select public.rollup_heatmaps()`);
+    expect((await db.query<{ n: number }>(`select sum(count)::int as n from public.heatmap_cells where proposal_id = $1`, [pid])).rows[0]!.n).toBe(3);
+    // One session's view uses its raw points
+    const one = (await db.query<{ n: number }>(`select sum(count)::int as n from public.heatmap_grid($1, 1, 'desktop', array['click']::public.heatmap_kind[], $2)`, [pid, sid])).rows[0]!.n;
+    expect(one).toBe(3);
+  });
+});

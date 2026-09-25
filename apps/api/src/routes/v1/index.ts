@@ -23,6 +23,8 @@ import { publishProposal } from "../../services/publish.js";
 import { sendProposalEmail } from "../../services/sendProposal.js";
 import { audit } from "../../services/audit.js";
 import { exportProposalPdf } from "../../services/pdf.js";
+import * as analytics from "../../services/analytics.js";
+import { OWNER_COOKIE, hasOwnerCookie, ownerCookieHeader, ownerCookieValue } from "../../lib/ownerCookie.js";
 import { loadSignature } from "../../services/public.js";
 import * as templates from "../../services/templates.js";
 
@@ -93,6 +95,29 @@ export const v1 = new Hono<AppEnv>()
     return c.body(null, 204);
   })
   .post("/proposals/:id/restore", async (c) => c.json(await proposals.restoreProposal(ctx(c), id(c))))
+  // Analytics sidebar (SPEC §7.3)
+  .get("/proposals/:id/analytics", async (c) => c.json(await analytics.getAnalytics(ctx(c), id(c))))
+  .get("/proposals/:id/analytics/sessions/:sid", async (c) => c.json(await analytics.getSessionDetail(ctx(c), id(c), parseOr422(z.uuid(), c.req.param("sid")))))
+  .get("/proposals/:id/analytics/heatmap", async (c) =>
+    c.json(
+      await analytics.getHeatmap(
+        ctx(c),
+        id(c),
+        parseOr422(
+          z.object({
+            version: z.coerce.number().int().min(1),
+            device: z.enum(["desktop", "tablet", "mobile"]).default("desktop"),
+            kind: z.enum(["clicks", "moves"]).default("clicks"),
+            sessionId: z.uuid().optional(),
+          }),
+          c.req.query(),
+        ),
+      ),
+    ),
+  )
+  .get("/proposals/:id/audit", async (c) => c.json(await analytics.getAuditTrail(ctx(c), id(c))))
+  .get("/proposals/:id/versions", async (c) => c.json(await analytics.listVersions(ctx(c), id(c))))
+  .get("/proposals/:id/versions/:version", async (c) => c.json(await analytics.getVersion(ctx(c), id(c), parseOr422(z.coerce.number().int().min(1), c.req.param("version")))))
   .post("/proposals/:id/archive", async (c) => c.json(await proposals.archiveProposal(ctx(c), id(c))))
   .post("/proposals/:id/save-as-template", async (c) =>
     c.json(await proposals.saveProposalAsTemplate(ctx(c), id(c), await body(c, SaveAsTemplateSchema)), 201),
@@ -107,6 +132,19 @@ export const v1 = new Hono<AppEnv>()
   .delete("/templates/:id", async (c) => {
     await templates.deleteTemplate(ctx(c), id(c));
     return c.body(null, 204);
+  })
+
+  // Tracking settings (SPEC §7.6): "this browser is me" and the current IP for exclusion
+  .get("/tracking/whoami", async (c) =>
+    c.json({ ip: c.req.header("CF-Connecting-IP") ?? "127.0.0.1", ownerCookie: await hasOwnerCookie(c.req.header("Cookie"), c.env.SIGNING_SECRET) }),
+  )
+  .post("/tracking/owner-cookie", async (c) => {
+    c.header("Set-Cookie", ownerCookieHeader(await ownerCookieValue(c.env.SIGNING_SECRET), c.env.APP_URL.startsWith("https"), 365 * 86_400));
+    return c.json({ ownerCookie: true });
+  })
+  .delete("/tracking/owner-cookie", async (c) => {
+    c.header("Set-Cookie", ownerCookieHeader("", c.env.APP_URL.startsWith("https"), 0));
+    return c.json({ ownerCookie: false, cookie: OWNER_COOKIE });
   })
 
   // Clients

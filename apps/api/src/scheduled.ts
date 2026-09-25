@@ -30,7 +30,10 @@ export async function handleScheduled(controller: ScheduledController, env: Env)
       await run("otp cleanup", async () => {
         await db.from("otp_codes").delete().lt("expires_at", new Date(Date.now() - 86_400_000).toISOString());
       });
-      // Phase 6: heatmap rollup + raw-point cleanup.
+      await run("heatmap rollup", async () => {
+        const { error } = await db.rpc("rollup_heatmaps");
+        if (error) throw new Error(error.message);
+      });
       return;
     default:
       console.warn(`Unknown cron: ${controller.cron}`);

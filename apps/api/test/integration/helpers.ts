@@ -66,3 +66,17 @@ export async function publicApi<T = unknown>(method: string, path: string, json?
 /** Collects waitUntil() work so tests can await or ignore it (no PDF rendering in unit/integration tests). */
 export const background: Promise<unknown>[] = [];
 export const executionCtx = { waitUntil: (p: Promise<unknown>) => void background.push(p.catch(() => {})), passThroughOnException() {}, props: {} } as unknown as ExecutionContext;
+
+export const REAL_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
+
+/** Calls the tracking ingest (/t/*) like the viewer's tracker would. */
+export async function trackApi<T = unknown>(path: string, json: unknown, headers: Record<string, string> = {}, e: Env = env()): Promise<{ status: number; body: T; headers: Headers }> {
+  const res = await createApp().request(
+    `/t${path}`,
+    { method: "POST", headers: { "Content-Type": "application/json", "User-Agent": REAL_UA, "CF-Connecting-IP": "198.51.100.7", ...headers }, body: typeof json === "string" ? json : JSON.stringify(json) },
+    e,
+    executionCtx,
+  );
+  const text = await res.text();
+  return { status: res.status, body: (text ? JSON.parse(text) : null) as T, headers: res.headers };
+}

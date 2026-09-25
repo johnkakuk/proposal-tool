@@ -4,6 +4,7 @@ import type { AppEnv } from "./env.js";
 import { ApiError } from "./lib/errors.js";
 import { health } from "./routes/health.js";
 import { publicRoutes } from "./routes/public.js";
+import { track } from "./routes/track.js";
 import { v1 } from "./routes/v1/index.js";
 
 /**
@@ -11,7 +12,7 @@ import { v1 } from "./routes/v1/index.js";
  *   /api/*          REST (admin, public viewer, v1)
  *   /mcp            MCP server                     — Phase 7
  *   /oauth/*, /.well-known/*  OAuth 2.1 for MCP    — Phase 7
- *   /t/*            tracking ingest                — Phase 6
+ *   /t/*            tracking ingest
  * All business logic lives in src/services/* (SPEC §10.5); routes stay thin.
  */
 export function createApp() {
@@ -19,6 +20,7 @@ export function createApp() {
 
   app.route("/api/health", health);
   app.route("/api/public", publicRoutes);
+  app.route("/t", track);
   app.route("/api/v1", v1);
 
   app.notFound((c) => c.json({ error: { code: "not_found", message: `No route for ${c.req.method} ${c.req.path}` } }, 404));

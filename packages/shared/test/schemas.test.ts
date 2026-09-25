@@ -193,3 +193,25 @@ describe("signing helpers", () => {
     expect(maskEmail("jo@x.io")).toBe("j*@x.io");
   });
 });
+
+describe("bot detection", () => {
+  it("flags crawlers, previewers, scanners, and headless browsers; lets real browsers through", async () => {
+    const { isBotUserAgent } = await import("../src/index.js");
+    for (const ua of [
+      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
+      "facebookexternalhit/1.1",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (compatible; Microsoft Office/16.0; Windows NT 10.0)",
+      "curl/8.4.0",
+      "",
+    ])
+      expect(isBotUserAgent(ua), ua).toBe(true);
+    for (const ua of [
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0",
+    ])
+      expect(isBotUserAgent(ua), ua).toBe(false);
+  });
+});
