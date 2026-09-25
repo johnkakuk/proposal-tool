@@ -17,7 +17,7 @@ Everything runs on free tiers: Cloudflare Pages + Workers, Supabase, and Resend.
 | 4 | E-signature | ✅ Done |
 | 5 | Email | ✅ Done |
 | 6 | Tracking & analytics | ✅ Done |
-| 7 | AI (MCP + REST) | — |
+| 7 | AI (MCP + REST) | ✅ Done |
 | 8 | Polish & deployment docs | — |
 
 ## Stack

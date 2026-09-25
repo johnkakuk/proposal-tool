@@ -6,6 +6,8 @@ export async function login(page: Page) {
   await page.getByLabel("Password").fill("bridger-dev-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Proposals" })).toBeVisible();
+  // Supabase persists the session just after the UI updates; wait so full page loads stay signed in.
+  await page.waitForFunction(() => Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k)));
 }
 
 export const unique = (label: string) => `${label} ${Date.now().toString(36)}`;

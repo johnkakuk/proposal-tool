@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button, ErrorNote, Spinner, inputClass } from "../components/ui";
 import { api } from "../lib/api";
+import { AiSettings } from "./AiSettings";
 import { supabase } from "../lib/supabase";
 
 /**
@@ -80,6 +81,7 @@ export function Settings() {
           </ul>
         )}
       </section>
+      <AiSettings />
       <TrackingSettings />
     </>
   );

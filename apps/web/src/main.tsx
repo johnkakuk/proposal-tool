@@ -34,6 +34,7 @@ const router = createBrowserRouter([
               { path: "settings", lazy: page(() => import("./pages/Settings"), "Settings") },
             ],
           },
+          { path: "connect/:id", lazy: page(() => import("./pages/ConnectConsent"), "ConnectConsent") },
           // Editors are full-screen, outside the app shell.
           { path: "proposals/:id", lazy: page(() => import("./pages/ProposalEditorPage"), "ProposalEditorPage") },
           { path: "templates/:id", lazy: page(() => import("./pages/TemplateEditorPage"), "TemplateEditorPage") },
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
     ],
   },
   { path: "/p/:slug", lazy: page(() => import("./public/PublicProposalPage"), "PublicProposalPage") },
+  { path: "/preview/:token", lazy: page(() => import("./public/PreviewPage"), "PreviewPage") },
   { path: "/p/:slug/certificate", lazy: page(() => import("./public/CertificatePage"), "CertificatePage") },
   { path: "*", element: <NotFound /> },
 ]);

@@ -74,6 +74,23 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - **Analytics** (`services/analytics.ts`) always filters `is_owner = false and is_bot = false`. The drawer can switch the editor canvas to a version render or a heatmap (`VersionCanvas`). The heatmap uses a single warm hue normalized per block, not a rainbow.
 - **E2E tracking tests** need a real-looking client: a normal user agent plus an init script that sets `navigator.webdriver` to false. Playwright's default headless UA is (correctly) a bot.
 
+## AI: MCP, OAuth, API keys, REST (SPEC §10)
+- **`src/index.ts`:** `OAuthProvider` wraps the Worker.
+  - It serves `/.well-known/oauth-*`, `/oauth/register` (dynamic client registration), and `/oauth/token`, and it protects `/mcp`.
+  - API keys reach `/mcp` via `resolveExternalToken`.
+  - Everything else goes to the Hono app.
+- **Consent:** `/oauth/authorize` (routes/oauth.ts) parks the request in `OAUTH_KV` for 10 min and redirects to `/app/connect/:id`. The owner approves via `/api/v1/oauth/consent/:id`, which calls `completeAuthorization` with props `{ ownerId, clientName, principal: "oauth" }`.
+- **`middleware/auth.ts` `requireAuth`** accepts three credential types:
+  - a Supabase session, which gives `principal: owner`;
+  - a `bdp_…` API key (SHA-256 at rest), which gives `api_key` with actor `ai:<key name>`;
+  - an OAuth token (`OAUTH_PROVIDER.unwrapToken`), which gives `oauth` with actor `ai:<client>`.
+
+  `requireHuman` guards deletes and credential management.
+- **MCP** (`src/mcp/server.ts`): the official SDK with `WebStandardStreamableHTTPServerTransport`, stateless. Tools call the same services as REST v1 (`created_via = mcp`). There are **no delete tools**. Tool inputs are lean (big JSON is `z.any()`) and are validated by the real schemas inside, so errors name blocks and fields.
+- **Permissions:** `ai_can_publish` / `ai_can_email_client` are enforced in `publish.ts` / `sendProposal.ts` for automated callers. AI creates and publishes notify John.
+- **OpenAPI 3.1** is at `/api/v1/openapi.json`, generated from the shared Zod schemas.
+- **Tests:** integration tests run `provider.fetch` in-process with an in-memory KV. `cloudflare:workers` is aliased to a stub, and the OAuth package is inlined in vitest. E2E runs the real runtime via `wrangler dev`. The login helper waits for the persisted Supabase session before any full page load.
+
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.
 - **To add a block/object type** (a developer task, not a user one):
