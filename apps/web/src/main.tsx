@@ -31,6 +31,7 @@ const router = createBrowserRouter([
               { path: "clients", lazy: page(() => import("./pages/Clients"), "Clients") },
               { path: "clients/:id", lazy: page(() => import("./pages/ClientDetail"), "ClientDetail") },
               { path: "write-with-ai", lazy: page(() => import("./pages/WriteWithAI"), "WriteWithAI") },
+              { path: "settings", lazy: page(() => import("./pages/Settings"), "Settings") },
             ],
           },
           // Editors are full-screen, outside the app shell.

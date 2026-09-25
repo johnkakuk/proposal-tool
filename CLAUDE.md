@@ -52,6 +52,16 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - **Email:** `lib/email.ts` supports `EMAIL_TRANSPORT` = resend (prod) | mailpit (local, http://127.0.0.1:54324, read codes there) | memory (integration tests). Every send is logged to `email_log`.
 - **Decline:** status → declined with a private reason (never in public payloads).
 
+## Email & notifications (SPEC §9, §13)
+- **Templates:** `apps/api/src/emails/templates.ts`, one function per email, on a branded table layout (`layout.ts`) with an HTML and a plain-text body. Escape all user content (`e()`/`table()`).
+- **`services/notify.ts`** holds the rules:
+  - Owner emails go to `OWNER_EMAIL` via `notifyOwner()`, which checks `settings.notification_prefs`. PDF failure always sends.
+  - Client emails (proposal sent, OTP, signed copy) always go, with reply-to John.
+- **Fire once:** pass a `dedupeKey`. `sendEmail` claims it in `email_log` (unique index) *before* sending; a duplicate returns `{ skipped: true }`. Key patterns: `owner_signed:{sigId}`, `expiring_soon:{id}:{expires_at}` (re-armed by extending), `daily_digest:{owner}:{localDate}`, `return_visit:{id}:{12h window}`, `first_view:{id}`.
+- **Cron (hourly):** expire, 3-day reminder, digest (sends only at 07:00 in the owner's timezone, so it's DST-safe), signed-PDF retries. **Daily (10:00 UTC):** keep-alive, OTP cleanup. Each job is isolated with try/catch.
+- `onViewActivity()` (first view / return visit) is ready for Phase 6 tracking to call for real sessions only.
+- **Settings → Notifications** writes `notification_prefs` directly (RLS).
+
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.
 - **To add a block/object type** (a developer task, not a user one):

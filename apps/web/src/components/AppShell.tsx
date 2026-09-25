@@ -6,6 +6,7 @@ const NAV = [
   { to: "/app", label: "Proposals", end: true },
   { to: "/app/templates", label: "Templates" },
   { to: "/app/clients", label: "Clients" },
+  { to: "/app/settings", label: "Settings" },
 ];
 
 export function AppShell() {

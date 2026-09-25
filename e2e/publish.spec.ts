@@ -60,7 +60,8 @@ test("editing and republishing bumps the version on the same link", async ({ pag
   expect(url2).toBe(url);
   await expect(page.getByText("Unpublished changes")).toBeHidden();
   await pub.reload();
-  await expect(pub.getByText("A late addition to the proposal.")).toBeVisible();
+  await expect(pub.locator("[data-block-type='cover']")).toBeVisible({ timeout: 20_000 });
+  await expect(pub.getByText("A late addition to the proposal.")).toBeVisible({ timeout: 20_000 });
   await client.close();
 });
 

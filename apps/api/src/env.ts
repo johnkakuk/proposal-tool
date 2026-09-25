@@ -19,6 +19,8 @@ export interface Env {
   /** resend (production) | mailpit (local dev: Supabase's bundled Mailpit) | memory (tests). */
   EMAIL_TRANSPORT?: "resend" | "mailpit" | "memory";
   MAILPIT_URL?: string;
+  /** Multiplies public rate limits. Unset (1) in production; raised in local dev. */
+  RATE_LIMIT_SCALE?: string;
   // Bindings
   BROWSER: Fetcher;
   // KV

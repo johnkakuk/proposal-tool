@@ -1,5 +1,5 @@
 import type { ClientRow, Pricing, ProposalContent, ProposalDetail } from "@bridger/shared";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ClientPicker } from "../components/ClientPicker";
@@ -26,8 +26,6 @@ export function ProposalEditorPage() {
   // Remount per proposal so the editor loads fresh content.
   return <ProposalEditorLoaded key={proposal.id} proposal={proposal} brand={settings.data?.brand?.theme ?? null} ownerSignatureName={settings.data?.ownerSignatureName} />;
 }
-
-const LATER = "Coming in a later phase";
 
 interface SignatureSummary {
   certificateId: string;
@@ -59,6 +57,7 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const signature = useQuery({
     queryKey: ["signature", proposal.id],
     queryFn: () => api<SignatureSummary>(`/proposals/${proposal.id}/signature`),
@@ -187,9 +186,9 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
                 <MenuItem disabled={!isLive || exporting} onClick={() => (setMoreOpen(false), void exportPdf())}>
                   {exporting ? "Exporting PDF…" : "Export PDF"}
                 </MenuItem>
-                <button role="menuitem" type="button" disabled title={LATER} className="block w-full rounded px-3 py-1.5 text-left text-slate-400">
-                  Send email
-                </button>
+                <MenuItem disabled={!isLive || locked || status === "expired"} onClick={() => (setMoreOpen(false), setEmailOpen(true))}>
+                  Send email…
+                </MenuItem>
                 <hr className="my-1 border-slate-100" />
                 <MenuItem onClick={() => (setMoreOpen(false), setTemplateOpen(true))}>Save as template…</MenuItem>
                 <MenuItem onClick={() => duplicate(false)}>Duplicate</MenuItem>
@@ -304,6 +303,7 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
           <Button onClick={() => setPublishIssues(null)}>OK</Button>
         </div>
       </Modal>
+      <SendEmailDialog open={emailOpen} onClose={() => setEmailOpen(false)} proposalId={proposal.id} clientEmail={client?.email ?? null} clientName={client?.name ?? null} unpublished={published.unpublished} />
       <SaveAsTemplateDialog open={templateOpen} onClose={() => setTemplateOpen(false)} proposalId={proposal.id} defaultName={title} beforeSave={flush} />
     </>
   );
@@ -352,6 +352,69 @@ function SaveAsTemplateDialog({ open, onClose, proposalId, defaultName, beforeSa
           </Button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function SendEmailDialog({
+  open,
+  onClose,
+  proposalId,
+  clientEmail,
+  clientName,
+  unpublished,
+}: {
+  open: boolean;
+  onClose: () => void;
+  proposalId: string;
+  clientEmail: string | null;
+  clientName: string | null;
+  unpublished: boolean;
+}) {
+  const first = clientName?.split(" ")[0];
+  const [message, setMessage] = useState(`Hi${first ? ` ${first}` : ""},\n\nHere's the proposal we talked about. Have a look and let me know if you have any questions. You can accept it right from the page.\n\nThanks!`);
+  const [sent, setSent] = useState<string | null>(null);
+  const send = useMutation({
+    mutationFn: () => api<{ to: string }>(`/proposals/${proposalId}/send-email`, { method: "POST", json: { message } }),
+    onSuccess: (r) => setSent(r.to),
+  });
+  return (
+    <Modal open={open} onClose={() => (onClose(), setSent(null), send.reset())} title="Email this proposal">
+      {sent ? (
+        <div className="space-y-4">
+          <p role="status" className="text-sm text-emerald-700">
+            ✓ Sent to {sent}.
+          </p>
+          <div className="flex justify-end">
+            <Button onClick={() => (onClose(), setSent(null))}>Done</Button>
+          </div>
+        </div>
+      ) : (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            send.mutate();
+          }}
+        >
+          <p className="text-sm text-slate-600">
+            To: <strong>{clientEmail ?? "—"}</strong>. Replies come to you. The email includes a button to open the proposal.
+          </p>
+          {!clientEmail && <p className="text-sm text-amber-700">Add an email address to this client first.</p>}
+          {unpublished && <p className="text-sm text-amber-700">You have unpublished changes. The client will see the last published version.</p>}
+          <label className="block text-sm font-medium">
+            Message
+            <textarea rows={8} className={`mt-1 ${inputClass}`} value={message} onChange={(e) => setMessage(e.target.value)} />
+          </label>
+          <ErrorNote error={send.error} />
+          <div className="flex justify-end gap-2">
+            <Button onClick={onClose}>Cancel</Button>
+            <Button type="submit" variant="primary" disabled={!clientEmail || send.isPending}>
+              {send.isPending ? "Sending…" : "Send"}
+            </Button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }

@@ -12,6 +12,7 @@ import { sendOtp, verifyOtp } from "../services/otp.js";
 import { getPublicCertificate, getPublicMeta, getPublicProposal, loadPublicRow, loadSignature, requestExtension } from "../services/public.js";
 import { declineProposal, signProposal } from "../services/signing.js";
 
+const scale = (c: Context<AppEnv>) => Number(c.env.RATE_LIMIT_SCALE ?? 1) || 1;
 const ip = (c: Context<AppEnv>) => c.req.header("CF-Connecting-IP") ?? "unknown";
 const meta = (c: Context<AppEnv>) => {
   const cf = (c.req.raw as { cf?: { country?: string; region?: string; city?: string } }).cf;
@@ -48,7 +49,7 @@ export const publicRoutes = new Hono<AppEnv>()
     return c.redirect(data.signedUrl, 302);
   })
   .post("/proposals/:slug/extension-request", async (c) => {
-    await rateLimit(c.env.RATE_KV, `ext:${ip(c)}`, 5, 3600);
+    await rateLimit(c.env.RATE_KV, `ext:${ip(c)}`, 5, 3600, scale(c));
     const input = await body(c, z.object({ message: z.string().max(1000).optional() }));
     const db = serviceClient(c.env);
     const proposalId = await requestExtension(db, c.req.param("slug"), { ...meta(c), message: input.message });
@@ -56,19 +57,19 @@ export const publicRoutes = new Hono<AppEnv>()
     return c.json({ ok: true });
   })
   .post("/proposals/:slug/otp", async (c) => {
-    await rateLimit(c.env.RATE_KV, `otp:${ip(c)}`, 10, 3600);
+    await rateLimit(c.env.RATE_KV, `otp:${ip(c)}`, 10, 3600, scale(c));
     const { email } = await body(c, OtpRequestSchema);
     await sendOtp(c.env, serviceClient(c.env), c.req.param("slug"), email, meta(c));
     return c.json({ ok: true });
   })
   .post("/proposals/:slug/otp/verify", async (c) => {
-    await rateLimit(c.env.RATE_KV, `otpv:${ip(c)}`, 30, 3600);
+    await rateLimit(c.env.RATE_KV, `otpv:${ip(c)}`, 30, 3600, scale(c));
     const { email, code } = await body(c, OtpVerifySchema);
     await verifyOtp(c.env, serviceClient(c.env), c.req.param("slug"), email, code, meta(c));
     return c.json({ ok: true });
   })
   .post("/proposals/:slug/sign", async (c) => {
-    await rateLimit(c.env.RATE_KV, `sign:${ip(c)}`, 10, 3600);
+    await rateLimit(c.env.RATE_KV, `sign:${ip(c)}`, 10, 3600, scale(c));
     const input = await body(c, SignRequestSchema);
     const db = serviceClient(c.env);
     const result = await signProposal(c.env, db, c.req.param("slug"), input, meta(c));
@@ -76,7 +77,7 @@ export const publicRoutes = new Hono<AppEnv>()
     return c.json(result);
   })
   .post("/proposals/:slug/decline", async (c) => {
-    await rateLimit(c.env.RATE_KV, `decline:${ip(c)}`, 10, 3600);
+    await rateLimit(c.env.RATE_KV, `decline:${ip(c)}`, 10, 3600, scale(c));
     const { reason } = await body(c, DeclineSchema);
     const db = serviceClient(c.env);
     const proposalId = await declineProposal(db, c.req.param("slug"), reason, meta(c));
