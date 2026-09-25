@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ClientForm } from "../components/ClientForm";
+import { ClientMenu } from "../components/RowMenus";
 import { Button, EmptyState, ErrorNote, Modal, Spinner, inputClass } from "../components/ui";
 import { useClientMutations, useClients } from "../lib/queries";
 
@@ -34,6 +35,9 @@ export function Clients() {
                 <th className="px-4 py-3 font-medium">Company</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Phone</th>
+                <th className="w-12 px-2 py-3">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -47,6 +51,9 @@ export function Clients() {
                   <td className="px-4 py-3 text-slate-600">{c.company ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{c.email ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{c.phone ?? "—"}</td>
+                  <td className="px-2 py-3 text-right">
+                    <ClientMenu client={c} />
+                  </td>
                 </tr>
               ))}
             </tbody>

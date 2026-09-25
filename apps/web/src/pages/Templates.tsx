@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button, EmptyState, ErrorNote, Modal, Spinner, inputClass, relativeTime } from "../components/ui";
+import { TemplateMenu } from "../components/RowMenus";
 import { useTemplateMutations, useTemplates } from "../lib/queries";
 
 export function Templates() {
   const { data, error, isLoading } = useTemplates();
-  const { create, duplicate, remove } = useTemplateMutations();
+  const { create } = useTemplateMutations();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export function Templates() {
           + New template
         </Button>
       </div>
-      <ErrorNote error={error ?? duplicate.error ?? remove.error} />
+      <ErrorNote error={error} />
       {isLoading ? (
         <Spinner />
       ) : !data?.length ? (
@@ -42,18 +43,7 @@ export function Templates() {
               {t.description && <p className="mt-1 line-clamp-2 text-sm text-slate-500">{t.description}</p>}
               <div className="mt-auto flex items-center justify-between pt-4 text-xs text-slate-400">
                 <span>Updated {relativeTime(t.updated_at)}</span>
-                <span className="flex gap-1">
-                  <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={() => duplicate.mutate(t.id)}>
-                    Duplicate
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="!px-2 !py-1 text-xs text-red-700"
-                    onClick={() => window.confirm(`Delete the “${t.name}” template? Proposals made from it are not affected.`) && remove.mutate(t.id)}
-                  >
-                    Delete
-                  </Button>
-                </span>
+                <TemplateMenu template={t} />
               </div>
             </li>
           ))}

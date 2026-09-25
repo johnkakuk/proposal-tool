@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { cadenceParts, money } from "../blocks/pricing/format";
 import { NewProposalDialog } from "../components/NewProposalDialog";
+import { ProposalMenu } from "../components/RowMenus";
 import { Button, EmptyState, ErrorNote, Spinner, StatusChip, inputClass, relativeTime, shortDate } from "../components/ui";
 import { useProposals } from "../lib/queries";
 
@@ -55,6 +56,9 @@ export function Dashboard() {
                 <th className="px-4 py-3 font-medium">Last viewed</th>
                 <th className="px-4 py-3 font-medium">Expires</th>
                 <th className="px-4 py-3 font-medium">Updated</th>
+                <th className="w-12 px-2 py-3">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -78,6 +82,9 @@ export function Dashboard() {
                   <td className="px-4 py-3 text-slate-600">{relativeTime(p.last_viewed_at)}</td>
                   <td className="px-4 py-3 text-slate-600">{shortDate(p.expires_at)}</td>
                   <td className="px-4 py-3 text-slate-600">{relativeTime(p.updated_at)}</td>
+                  <td className="px-2 py-3 text-right">
+                    <ProposalMenu proposal={p} />
+                  </td>
                 </tr>
               ))}
             </tbody>

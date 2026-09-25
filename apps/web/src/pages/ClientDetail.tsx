@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { cadenceParts, money } from "../blocks/pricing/format";
 import { ClientForm } from "../components/ClientForm";
-import { Button, EmptyState, ErrorNote, Spinner, StatusChip, relativeTime } from "../components/ui";
+import { ClientMenu, ProposalMenu } from "../components/RowMenus";
+import { EmptyState, ErrorNote, Spinner, StatusChip, relativeTime } from "../components/ui";
 import { useClient, useClientMutations } from "../lib/queries";
 
 export function ClientDetail() {
   const { id = "" } = useParams();
   const { data, error, isLoading } = useClient(id);
-  const { update, remove } = useClientMutations();
+  const { update } = useClientMutations();
   const [saved, setSaved] = useState(false);
   const navigate = useNavigate();
 
@@ -25,15 +26,8 @@ export function ClientDetail() {
           {data.name}
           {data.company && <span className="font-normal text-slate-500"> · {data.company}</span>}
         </h1>
-        <Button
-          variant="danger"
-          onClick={() => window.confirm(`Delete ${data.name}?`) && remove.mutate(data.id, { onSuccess: () => navigate("/app/clients") })}
-          disabled={remove.isPending}
-        >
-          Delete client
-        </Button>
+        <ClientMenu client={data} onDeleted={() => navigate("/app/clients")} />
       </div>
-      <ErrorNote error={remove.error} />
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <section className="rounded-xl bg-white p-6 shadow-xs ring-1 ring-slate-200">
           <h2 className="mb-4 font-semibold">Contact</h2>
@@ -60,6 +54,7 @@ export function ClientDetail() {
                     </Link>
                     <div className="text-xs text-slate-500">Updated {relativeTime(p.updated_at)}</div>
                   </div>
+                  <div className="flex items-center gap-2">
                   <div className="text-right text-sm tabular-nums">
                     <StatusChip status={p.status} />
                     <div className="mt-1 text-slate-600">
@@ -67,6 +62,8 @@ export function ClientDetail() {
                         .map(([c, v]) => money(v, c))
                         .join(" + ")}
                     </div>
+                  </div>
+                  <ProposalMenu proposal={p} />
                   </div>
                 </li>
               ))}

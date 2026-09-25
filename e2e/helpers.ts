@@ -48,19 +48,21 @@ export function adminDb() {
 }
 
 /** Creates a publishable proposal from the Content War Chest template with a new client. */
-export async function newTemplateProposal(page: Page, title: string) {
+export async function newTemplateProposal(page: Page, title: string): Promise<{ company: string }> {
   await page.getByRole("button", { name: "+ New proposal" }).click();
-  await page.getByRole("button", { name: /From template/ }).click();
+  await page.getByRole("dialog", { name: "New proposal" }).getByRole("button", { name: /^From template/ }).click();
   await page.getByRole("radio", { name: /Content War Chest/ }).click();
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Client").selectOption({ label: "+ New client…" });
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Title", { exact: true }).fill(title);
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Client", { exact: true }).selectOption({ label: "+ New client…" });
   const d = page.getByRole("dialog", { name: "New client" });
   await d.getByLabel("Contact name").fill("Riley Chen");
-  await d.getByLabel("Company").fill(`Northwind ${Date.now().toString(36)}`);
+  const company = `Northwind ${Date.now().toString(36)}`;
+  await d.getByLabel("Company").fill(company);
   await d.getByLabel("Email").fill("riley@northwind.test");
   await d.getByRole("button", { name: "Create client" }).click();
   await page.getByRole("button", { name: "Create proposal" }).click();
   await page.waitForURL(/\/app\/proposals\//);
+  return { company };
 }
 
 /** Publishes from the editor and returns the public link from the share dialog. */

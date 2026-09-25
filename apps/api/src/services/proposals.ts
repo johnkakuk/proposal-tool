@@ -220,6 +220,34 @@ export async function archiveProposal(ctx: ServiceContext, id: string): Promise<
   return getProposal(ctx, id);
 }
 
+/**
+ * Restores an archived proposal to the status it would otherwise have: signed and
+ * declined proposals keep that outcome; published ones return to sent/viewed (or expired
+ * if their date passed); never-published ones return to draft.
+ */
+export async function restoreProposal(ctx: ServiceContext, id: string): Promise<ProposalDetail> {
+  const row = found(
+    await ctx.db.from("proposals").select("id, status, signed_at, declined_at, current_version, first_viewed_at, expires_at").eq("owner_id", ctx.ownerId).eq("id", id).maybeSingle(),
+    "load the proposal",
+    "Proposal",
+  ) as { id: string; status: string; signed_at: string | null; declined_at: string | null; current_version: number; first_viewed_at: string | null; expires_at: string | null };
+  if (row.status !== "archived") return getProposal(ctx, id);
+  const status = row.signed_at
+    ? "signed"
+    : row.declined_at
+      ? "declined"
+      : row.current_version === 0
+        ? "draft"
+        : row.expires_at && Date.parse(row.expires_at) <= Date.now()
+          ? "expired"
+          : row.first_viewed_at
+            ? "viewed"
+            : "sent";
+  must(await ctx.db.from("proposals").update({ status }).eq("owner_id", ctx.ownerId).eq("id", id), "restore the proposal");
+  await audit(ctx, id, "edited", { restoredTo: status });
+  return getProposal(ctx, id);
+}
+
 export async function saveProposalAsTemplate(ctx: ServiceContext, id: string, input: z.output<typeof SaveAsTemplateSchema>): Promise<TemplateDetail> {
   const source = await getProposal(ctx, id);
   return must(

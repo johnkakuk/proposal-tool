@@ -67,7 +67,7 @@ test("editing and republishing bumps the version on the same link", async ({ pag
 
 test("drafts are never visible publicly, and incomplete proposals can't be published", async ({ page, browser }) => {
   await page.getByRole("button", { name: "+ New proposal" }).click();
-  await page.getByLabel("Title").fill(unique("Draft"));
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Title", { exact: true }).fill(unique("Draft"));
   await page.getByRole("button", { name: "Create proposal" }).click();
   await page.waitForURL(/\/app\/proposals\//);
 

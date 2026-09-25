@@ -132,6 +132,19 @@ describe("proposals", () => {
     expect(del.status).toBe(409);
   });
 
+  it("restores archived proposals to their natural status", async () => {
+    const draft = (await call<ProposalDetail>("POST", "/proposals", { title: `Restore draft ${run}` })).body;
+    await call("POST", `/proposals/${draft.id}/archive`);
+    expect((await call<ProposalDetail>("POST", `/proposals/${draft.id}/restore`)).body.status).toBe("draft");
+
+    const pub = (await call<ProposalDetail>("POST", "/proposals", { title: `Restore sent ${run}`, clientId: client.id, templateId: template.id })).body;
+    await call("POST", `/proposals/${pub.id}/publish`);
+    await call("POST", `/proposals/${pub.id}/archive`);
+    const restored = (await call<ProposalDetail>("POST", `/proposals/${pub.id}/restore`)).body;
+    expect(restored.status).toBe("sent");
+    expect(restored.current_version).toBe(1);
+  });
+
   it("archives, hiding it from the default list", async () => {
     const p = (await call<ProposalDetail>("POST", "/proposals", { title: `Archive me ${run}` })).body;
     expect((await call<ProposalDetail>("POST", `/proposals/${p.id}/archive`)).body.status).toBe("archived");

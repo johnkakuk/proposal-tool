@@ -10,8 +10,8 @@ test("builds a complete proposal from blank, and it survives a reload", async ({
   const company = unique("Peak Plumbing");
 
   await page.getByRole("button", { name: "+ New proposal" }).click();
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Client").selectOption({ label: "+ New client…" });
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Title", { exact: true }).fill(title);
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Client", { exact: true }).selectOption({ label: "+ New client…" });
   const clientDialog = page.getByRole("dialog", { name: "New client" });
   await clientDialog.getByLabel("Contact name").fill("Sam Rivera");
   await clientDialog.getByLabel("Company").fill(company);
@@ -89,9 +89,9 @@ test("builds a complete proposal from blank, and it survives a reload", async ({
 test("creates from a template and saves it back as a new template", async ({ page }) => {
   const title = unique("From template");
   await page.getByRole("button", { name: "+ New proposal" }).click();
-  await page.getByRole("button", { name: /From template/ }).click();
+  await page.getByRole("dialog", { name: "New proposal" }).getByRole("button", { name: /^From template/ }).click();
   await page.getByRole("radio", { name: /Content War Chest/ }).click();
-  await page.getByLabel("Title").fill(title);
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Title", { exact: true }).fill(title);
   await page.getByRole("button", { name: "Create proposal" }).click();
   await page.waitForURL(/\/app\/proposals\//);
 
@@ -124,7 +124,7 @@ test("creates from a template and saves it back as a new template", async ({ pag
 
 test("slash menu is keyboard navigable and keeps the signature unique", async ({ page }) => {
   await page.getByRole("button", { name: "+ New proposal" }).click();
-  await page.getByLabel("Title").fill(unique("Slash"));
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Title", { exact: true }).fill(unique("Slash"));
   await page.getByRole("button", { name: "Create proposal" }).click();
   await page.waitForURL(/\/app\/proposals\//);
 
@@ -160,7 +160,7 @@ test("slash menu is keyboard navigable and keeps the signature unique", async ({
 
 test("undo reverts edits, including object changes", async ({ page }) => {
   await page.getByRole("button", { name: "+ New proposal" }).click();
-  await page.getByLabel("Title").fill(unique("Undo"));
+  await page.getByRole("dialog", { name: "New proposal" }).getByLabel("Title", { exact: true }).fill(unique("Undo"));
   await page.getByRole("button", { name: "Create proposal" }).click();
   await page.waitForURL(/\/app\/proposals\//);
 

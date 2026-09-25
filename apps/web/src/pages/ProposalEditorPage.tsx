@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ClientPicker } from "../components/ClientPicker";
+import { ConfirmDialog } from "../components/dialogs";
 import { Button, ErrorNote, Modal, Spinner, StatusChip, inputClass } from "../components/ui";
 import { api, ApiRequestError, downloadFromApi } from "../lib/api";
 import { useClients, useProposal, useProposalAction, useWorkspaceSettings } from "../lib/queries";
@@ -58,6 +59,7 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const signature = useQuery({
     queryKey: ["signature", proposal.id],
     queryFn: () => api<SignatureSummary>(`/proposals/${proposal.id}/signature`),
@@ -192,15 +194,13 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
                 <hr className="my-1 border-slate-100" />
                 <MenuItem onClick={() => (setMoreOpen(false), setTemplateOpen(true))}>Save as template…</MenuItem>
                 <MenuItem onClick={() => duplicate(false)}>Duplicate</MenuItem>
-                {!locked && (
-                  <MenuItem
-                    onClick={() =>
-                      window.confirm("Archive this proposal? It will be hidden from the dashboard.") &&
-                      action.mutate({ id: proposal.id, action: "archive" }, { onSuccess: () => navigate("/app") })
-                    }
-                  >
-                    Archive
-                  </MenuItem>
+                {proposal.status !== "archived" && (
+                  <>
+                    <hr className="my-1 border-slate-100" />
+                    <button role="menuitem" type="button" onClick={() => (setMoreOpen(false), setDeleteOpen(true))} className="block w-full rounded px-3 py-1.5 text-left text-red-600 hover:bg-red-50">
+                      Delete
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -303,6 +303,24 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
           <Button onClick={() => setPublishIssues(null)}>OK</Button>
         </div>
       </Modal>
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        danger
+        title={`Delete “${title}”?`}
+        body={
+          <>
+            <p>It's removed from your proposals{isLive ? " and its client link stops working" : ""}.</p>
+            <p className="mt-2 text-slate-500">Because every proposal keeps a permanent audit trail, deleted proposals are archived rather than erased. You can restore it from the Archived filter.</p>
+          </>
+        }
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          await api(`/proposals/${proposal.id}/archive`, { method: "POST" });
+          void qc.invalidateQueries({ queryKey: ["proposals"] });
+          navigate("/app");
+        }}
+      />
       <SendEmailDialog open={emailOpen} onClose={() => setEmailOpen(false)} proposalId={proposal.id} clientEmail={client?.email ?? null} clientName={client?.name ?? null} unpublished={published.unpublished} />
       <SaveAsTemplateDialog open={templateOpen} onClose={() => setTemplateOpen(false)} proposalId={proposal.id} defaultName={title} beforeSave={flush} />
     </>
