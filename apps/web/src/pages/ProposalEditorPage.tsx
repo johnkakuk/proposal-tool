@@ -1,7 +1,9 @@
 import type { ClientRow, Pricing, ProposalContent, ProposalDetail } from "@bridger/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { AnalyticsDrawer, type CanvasView } from "../analytics/AnalyticsDrawer";
+import { VersionCanvas } from "../analytics/HeatmapView";
 import { ClientPicker } from "../components/ClientPicker";
 import { ConfirmDialog } from "../components/dialogs";
 import { Button, ErrorNote, Modal, Spinner, StatusChip, inputClass } from "../components/ui";
@@ -60,6 +62,10 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
   const [exporting, setExporting] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const analyticsOpen = params.get("analytics") === "1";
+  const setAnalyticsOpen = (open: boolean) => setParams((p) => (open ? p.set("analytics", "1") : p.delete("analytics"), p), { replace: true });
+  const [canvasView, setCanvasView] = useState<CanvasView>(null);
   const signature = useQuery({
     queryKey: ["signature", proposal.id],
     queryFn: () => api<SignatureSummary>(`/proposals/${proposal.id}/signature`),
@@ -169,6 +175,11 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
         }
         actions={
           <div className="relative flex items-center gap-2">
+            {(isLive || locked) && (
+              <Button aria-pressed={analyticsOpen} variant={analyticsOpen ? "primary" : "secondary"} onClick={() => setAnalyticsOpen(!analyticsOpen)}>
+                Analytics
+              </Button>
+            )}
             {!locked && (
               <Button variant="primary" onClick={() => void publish()} disabled={publishing || upToDate} title={upToDate ? "The client sees the latest version" : undefined}>
                 {publishing ? "Publishing…" : publishLabel}
@@ -205,6 +216,12 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
               </div>
             )}
           </div>
+        }
+        drawer={analyticsOpen ? <AnalyticsDrawer proposalId={proposal.id} currentVersion={published.version} onClose={() => setAnalyticsOpen(false)} onCanvas={setCanvasView} /> : undefined}
+        canvasOverride={
+          analyticsOpen && canvasView ? (
+            <VersionCanvas proposalId={proposal.id} version={canvasView.version} device={canvasView.device} brand={brand} heat={canvasView.kind === "heatmap" ? canvasView.heat : undefined} />
+          ) : undefined
         }
         banner={
           locked ? (

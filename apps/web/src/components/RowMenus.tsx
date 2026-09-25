@@ -27,6 +27,7 @@ export function ProposalMenu({ proposal: p }: { proposal: ProposalSummary }) {
 
   const actions: MenuAction[] = [
     { label: "Edit", onSelect: () => navigate(`/app/proposals/${p.id}`) },
+    { label: "Analytics", onSelect: () => navigate(`/app/proposals/${p.id}?analytics=1`), disabled: p.current_version === 0, hint: "Publish it first" },
     { label: "Rename", onSelect: () => setDialog("rename"), disabled: locked || archived, hint: locked ? "Signed proposals can't be renamed" : "Restore it first" },
     {
       label: "Duplicate",

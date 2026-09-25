@@ -36,6 +36,8 @@ export interface ProposalSummary {
   created_via: CreatedVia;
   created_at: string;
   updated_at: string;
+  /** Real (non-owner, non-bot) views. Only on list responses. */
+  view_count?: number;
 }
 
 export interface ProposalDetail extends ProposalSummary {

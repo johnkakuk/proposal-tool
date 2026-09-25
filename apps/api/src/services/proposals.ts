@@ -72,11 +72,20 @@ async function toDetail(ctx: ServiceContext, row: DetailRow): Promise<ProposalDe
 const LOCKED_MESSAGE = "This proposal is signed and locked. Duplicate it as a new revision to make changes.";
 
 export async function listProposals(ctx: ServiceContext, query: z.output<typeof ListProposalsQuerySchema>): Promise<ProposalSummary[]> {
-  let q = ctx.db.from("proposals").select(SUMMARY_COLUMNS).eq("owner_id", ctx.ownerId).order("updated_at", { ascending: false }).limit(500);
+  // View count = real sessions only (owner and bot visits never count).
+  let q = ctx.db
+    .from("proposals")
+    .select(`${SUMMARY_COLUMNS}, views:view_sessions(count)`)
+    .eq("owner_id", ctx.ownerId)
+    .eq("view_sessions.is_owner", false)
+    .eq("view_sessions.is_bot", false)
+    .order("updated_at", { ascending: false })
+    .limit(500);
   q = query.status ? q.eq("status", query.status) : q.neq("status", "archived");
   if (query.clientId) q = q.eq("client_id", query.clientId);
   if (query.q) q = q.ilike("title", `%${query.q.replace(/[%_\\]/g, (m) => `\\${m}`)}%`);
-  return must(await q, "list proposals") as unknown as ProposalSummary[];
+  const rows = must(await q, "list proposals") as unknown as (ProposalSummary & { views: { count: number }[] })[];
+  return rows.map(({ views, ...p }) => ({ ...p, view_count: views[0]?.count ?? 0 }));
 }
 
 export async function getProposal(ctx: ServiceContext, id: string): Promise<ProposalDetail> {

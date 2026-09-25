@@ -53,6 +53,7 @@ export function Dashboard() {
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 text-right font-medium">Value</th>
                 <th className="px-4 py-3 font-medium">Sent</th>
+                <th className="px-4 py-3 text-right font-medium">Views</th>
                 <th className="px-4 py-3 font-medium">Last viewed</th>
                 <th className="px-4 py-3 font-medium">Expires</th>
                 <th className="px-4 py-3 font-medium">Updated</th>
@@ -79,6 +80,7 @@ export function Dashboard() {
                     ))}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{shortDate(p.sent_at)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-600">{p.view_count ?? 0}</td>
                   <td className="px-4 py-3 text-slate-600">{relativeTime(p.last_viewed_at)}</td>
                   <td className="px-4 py-3 text-slate-600">{shortDate(p.expires_at)}</td>
                   <td className="px-4 py-3 text-slate-600">{relativeTime(p.updated_at)}</td>

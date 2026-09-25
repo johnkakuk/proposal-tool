@@ -32,6 +32,10 @@ export interface DocumentWorkspaceProps {
   /** Whether to show the publish checklist, and the client-email input to it. */
   publishCheck?: { clientHasEmail: boolean };
   banner?: ReactNode;
+  /** Replaces the sidebar (e.g. the analytics drawer). */
+  drawer?: ReactNode;
+  /** Replaces the editing canvas (e.g. a heatmap or an older version). The editor stays mounted. */
+  canvasOverride?: ReactNode;
 }
 
 export function DocumentWorkspace(p: DocumentWorkspaceProps) {
@@ -106,6 +110,8 @@ export function DocumentWorkspace(p: DocumentWorkspaceProps) {
 
       <div className="flex flex-1 flex-col lg:flex-row">
         <div className="min-w-0 flex-1 bg-slate-100/70 px-4 py-8">
+          {p.canvasOverride}
+          <div hidden={Boolean(p.canvasOverride)}>
           <RenderProvider value={renderValue} theme={p.brand} overrides={content.theme}>
             <div
               className={`@container mx-auto rounded-xl bg-(--color-background) shadow-sm ring-1 ring-slate-200 transition-[max-width] ${device === "mobile" ? "max-w-[390px] px-5 py-8" : "max-w-4xl px-8 py-12 sm:px-14"}`}
@@ -118,13 +124,16 @@ export function DocumentWorkspace(p: DocumentWorkspaceProps) {
               {preview && <ProposalBlocks content={content} />}
             </div>
           </RenderProvider>
+          </div>
         </div>
 
+        {p.drawer ?? (
         <aside className="w-full shrink-0 space-y-4 border-l border-slate-200 bg-white p-4 lg:sticky lg:top-[57px] lg:h-[calc(100vh-57px)] lg:w-80 lg:overflow-y-auto">
           {p.sidebar}
           <PricingSummary pricing={pricing} result={renderValue.result} meta={meta} onMetaChange={handleMetaChange} readOnly={p.readOnly} />
           {p.publishCheck && <PublishChecklist content={content} pricing={pricing} clientHasEmail={p.publishCheck.clientHasEmail} />}
         </aside>
+        )}
       </div>
     </div>
   );

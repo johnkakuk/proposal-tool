@@ -22,12 +22,12 @@ test("proposal menu: rename, duplicate, copy link, download PDF, delete and rest
   // Delete is red and set apart
   await menuFor(page, title).click();
   const menu = page.getByRole("menu", { name: `Actions for ${title}` });
-  await expect(menu.getByRole("menuitem")).toHaveText(["Edit", "Rename", "Duplicate", "Copy link", "Download PDF", "Delete"]);
+  await expect(menu.getByRole("menuitem")).toHaveText(["Edit", "Analytics", "Rename", "Duplicate", "Copy link", "Download PDF", "Delete"]);
   await expect(menu.getByRole("menuitem", { name: "Delete" })).toHaveClass(/text-red-600/);
   // Keyboard: focus starts on the first item; arrows move; Esc closes and returns focus
   await expect(menu.getByRole("menuitem", { name: "Edit" })).toBeFocused();
   await page.keyboard.press("ArrowDown");
-  await expect(menu.getByRole("menuitem", { name: "Rename" })).toBeFocused();
+  await expect(menu.getByRole("menuitem", { name: "Analytics" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
   await expect(menuFor(page, title)).toBeFocused();
@@ -64,7 +64,7 @@ test("proposal menu: rename, duplicate, copy link, download PDF, delete and rest
 
   await page.getByLabel("Filter by status").selectOption("archived");
   await menuFor(page, renamed).click();
-  await expect(page.getByRole("menu", { name: `Actions for ${renamed}` }).getByRole("menuitem")).toHaveText(["Edit", "Rename", "Duplicate", "Copy link", "Download PDF", "Restore", "Delete permanently"]);
+  await expect(page.getByRole("menu", { name: `Actions for ${renamed}` }).getByRole("menuitem")).toHaveText(["Edit", "Analytics", "Rename", "Duplicate", "Copy link", "Download PDF", "Restore", "Delete permanently"]);
   await page.keyboard.press("Escape");
   await pick(page, renamed, "Restore");
   await expect(page.getByText(`Restored “${renamed}”`)).toBeVisible();

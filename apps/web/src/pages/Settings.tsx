@@ -1,6 +1,8 @@
 import { NotificationPrefsSchema, defaultNotificationPrefs, type NotificationPrefs, type OwnerNotificationType } from "@bridger/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ErrorNote, Spinner } from "../components/ui";
+import { useState } from "react";
+import { Button, ErrorNote, Spinner, inputClass } from "../components/ui";
+import { api } from "../lib/api";
 import { supabase } from "../lib/supabase";
 
 /**
@@ -78,6 +80,101 @@ export function Settings() {
           </ul>
         )}
       </section>
+      <TrackingSettings />
     </>
+  );
+}
+
+/** Tracking (SPEC §7.6): excluded IPs and the "this browser is me" cookie. */
+function TrackingSettings() {
+  const qc = useQueryClient();
+  const who = useQuery({ queryKey: ["tracking-whoami"], queryFn: () => api<{ ip: string; ownerCookie: boolean }>("/tracking/whoami") });
+  const ips = useQuery({
+    queryKey: ["excluded-ips"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("settings").select("id, excluded_ips").single();
+      if (error) throw error;
+      return { id: data.id as string, ips: (data.excluded_ips as string[]) ?? [] };
+    },
+  });
+  const [draft, setDraft] = useState("");
+  const saveIps = useMutation({
+    mutationFn: async (next: string[]) => {
+      const { error } = await supabase.from("settings").update({ excluded_ips: next }).eq("id", ips.data!.id);
+      if (error) throw error;
+      return next;
+    },
+    onSuccess: (next) => qc.setQueryData(["excluded-ips"], { id: ips.data!.id, ips: next }),
+  });
+  const cookie = useMutation({
+    mutationFn: (on: boolean) => api<{ ownerCookie: boolean }>("/tracking/owner-cookie", { method: on ? "POST" : "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tracking-whoami"] }),
+  });
+  const add = (ip: string) => {
+    const v = ip.trim();
+    if (!v || ips.data?.ips.includes(v)) return;
+    saveIps.mutate([...(ips.data?.ips ?? []), v]);
+    setDraft("");
+  };
+  return (
+    <section className="mt-6 max-w-2xl rounded-xl bg-white p-6 shadow-xs ring-1 ring-slate-200">
+      <h2 className="font-semibold">Tracking</h2>
+      <p className="mt-1 text-sm text-slate-500">Your own visits never count toward views, analytics, or notifications. You're recognized when you're signed in here, and also by these settings.</p>
+      <ErrorNote error={who.error ?? ips.error ?? saveIps.error ?? cookie.error} />
+      <div className="mt-4 flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <div className="text-sm font-medium">This browser is me</div>
+          <div className="text-xs text-slate-500">Ignore visits from this browser even when you're signed out (e.g. checking a link as a client would).</div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={who.data?.ownerCookie ?? false}
+          aria-label="This browser is me"
+          disabled={!who.data || cookie.isPending}
+          onClick={() => cookie.mutate(!who.data!.ownerCookie)}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition ${who.data?.ownerCookie ? "bg-brand" : "bg-slate-300"}`}
+        >
+          <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${who.data?.ownerCookie ? "left-5.5" : "left-0.5"}`} />
+        </button>
+      </div>
+      <div className="mt-4">
+        <div className="text-sm font-medium">Excluded IP addresses</div>
+        <div className="text-xs text-slate-500">Visits from these addresses (your office, your home) never count.</div>
+        {ips.isLoading ? (
+          <Spinner />
+        ) : (
+          <>
+            <ul className="mt-2 space-y-1" aria-label="Excluded IP addresses">
+              {ips.data?.ips.map((ip) => (
+                <li key={ip} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-1.5 font-mono text-sm">
+                  {ip}
+                  <button type="button" aria-label={`Remove ${ip}`} onClick={() => saveIps.mutate(ips.data!.ips.filter((x) => x !== ip))} className="text-slate-400 hover:text-red-600">
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <form
+              className="mt-2 flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                add(draft);
+              }}
+            >
+              <input aria-label="IP address to exclude" placeholder="203.0.113.10" className={`${inputClass} font-mono`} value={draft} onChange={(e) => setDraft(e.target.value)} />
+              <Button type="submit" disabled={!draft.trim()}>
+                Add
+              </Button>
+            </form>
+            {who.data && !ips.data?.ips.includes(who.data.ip) && (
+              <button type="button" onClick={() => add(who.data!.ip)} className="mt-2 text-sm font-medium text-brand hover:underline">
+                + Add my current IP ({who.data.ip})
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </section>
   );
 }

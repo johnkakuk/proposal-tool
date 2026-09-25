@@ -1,6 +1,6 @@
 import type { PublicProposal, Selections } from "@bridger/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { cadenceParts, money } from "../blocks/pricing/format";
 import { formatIsoDate } from "../render/format";
@@ -10,6 +10,7 @@ import { NotAvailableError, fetchCertificate, fetchPublicProposal, requestExtens
 import { CertificateDetails } from "./Certificate";
 import { DeclineDialog } from "./DeclineDialog";
 import { SigningModal } from "./SigningModal";
+import { startTracker, type Tracker } from "../tracking/tracker";
 
 /**
  * Client-facing proposal (SPEC §8.1). `?print=1` renders the print/PDF view: no header,
@@ -48,8 +49,26 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
   const [selections, setSelections] = useState<Selections | undefined>(signed?.selections);
   const [signing, setSigning] = useState(false);
   const [declining, setDeclining] = useState(false);
-  const onSelect = useCallback((sectionId: string, itemIds: string[]) => setSelections((s) => ({ ...s, [sectionId]: itemIds })), []);
   const active = !print && proposal.state === "active";
+
+  // Viewing analytics (SPEC §11): never in print; the tracker also skips the owner and bots.
+  const mainRef = useRef<HTMLElement>(null);
+  const tracker = useRef<Tracker | null>(null);
+  useEffect(() => {
+    if (print || !mainRef.current) return;
+    const t = startTracker({ slug: proposal.slug, version: proposal.version, root: mainRef.current });
+    tracker.current = t;
+    return () => t.stop();
+  }, [print, proposal.slug, proposal.version]);
+
+  const selectionsRef = useRef<Selections>({});
+  const onSelect = useCallback((sectionId: string, itemIds: string[]) => {
+    const before = new Set(selectionsRef.current[sectionId] ?? []);
+    const after = new Set(itemIds);
+    for (const id of after) if (!before.has(id)) tracker.current?.pricing(sectionId, id, "selected");
+    for (const id of before) if (!after.has(id)) tracker.current?.pricing(sectionId, id, "deselected");
+    setSelections((s) => ({ ...s, [sectionId]: itemIds }));
+  }, []);
   const signingContext = useMemo(
     () => ({ slug: proposal.slug, signed, onAccept: active ? () => setSigning(true) : undefined, onDecline: active ? () => setDeclining(true) : undefined }),
     [proposal.slug, signed, active],
@@ -60,6 +79,7 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
     ownerSignatureName: doc.ownerSignature?.name,
     signing: signingContext,
   });
+  selectionsRef.current = value.selections;
 
   // Print view: the PDF renderer waits for [data-print-ready]; signed PDFs include the certificate.
   const cert = useQuery({ queryKey: ["certificate", proposal.slug, token], queryFn: () => fetchCertificate(proposal.slug, token), enabled: print && Boolean(signed), retry: false });
@@ -113,7 +133,7 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
             </div>
           </header>
         )}
-        <main className="mx-auto max-w-4xl px-4 py-10 sm:px-8 print:max-w-none print:p-0">
+        <main ref={mainRef} className="mx-auto max-w-4xl px-4 py-10 sm:px-8 print:max-w-none print:p-0">
           <ProposalBlocks content={doc.content} />
           {proposal.expiresAt && active && <p className="mt-10 text-center text-sm opacity-60">This proposal is valid until {formatIsoDate(proposal.expiresAt.slice(0, 10))}.</p>}
           {print && cert.data && (

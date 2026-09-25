@@ -62,6 +62,18 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - `onViewActivity()` (first view / return visit) is ready for Phase 6 tracking to call for real sessions only.
 - **Settings → Notifications** writes `notification_prefs` directly (RLS).
 
+## Tracking & analytics (SPEC §11, §7.3)
+- **Tracker** (`apps/web/src/tracking/tracker.ts`) runs on the public viewer only. It's off in print, under `navigator.webdriver`, and when an admin session exists in localStorage.
+  - The session starts after 3 s visible; active time requires input in the last 30 s.
+  - Block visibility uses IntersectionObserver ≥50%. Points are block-relative (0–1); mouse movement is desktop-only (150 ms / 20 px).
+  - Flushes every 5 s, plus a `sendBeacon` (text/plain) on hide.
+- **Ingest** (`/t/session`, `/t/events`, `services/tracking.ts`) caps payloads at 64 KB and rate-limits.
+  - Bots: `isBotUserAgent` (shared). Owner: admin-session hint, `settings.excluded_ips`, or the signed HttpOnly `bdp_owner` cookie. Owner/bot sessions are stored flagged but hold **no events** and never touch status or notifications.
+  - IPs are only stored as a salted SHA-256; the referrer is reduced to its hostname.
+- **DB:** `ingest_tracking` (atomic batch; 3,000 points/session), `rollup_heatmaps` (nightly: >24 h → `heatmap_cells`; raw deleted after 90 d), `heatmap_grid` (cells + fresh raw; bucket via `::numeric` to avoid float edge cases).
+- **Analytics** (`services/analytics.ts`) always filters `is_owner = false and is_bot = false`. The drawer can switch the editor canvas to a version render or a heatmap (`VersionCanvas`). The heatmap uses a single warm hue normalized per block, not a rainbow.
+- **E2E tracking tests** need a real-looking client: a normal user agent plus an init script that sets `navigator.webdriver` to false. Playwright's default headless UA is (correctly) a bot.
+
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.
 - **To add a block/object type** (a developer task, not a user one):
