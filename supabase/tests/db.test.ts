@@ -47,7 +47,18 @@ async function signedProposal(): Promise<string> {
   return id;
 }
 
-async function insertSignature(proposalId: string, certificateId = "BDP-7K3Q-92XD"): Promise<string> {
+// Certificate IDs are unique in the database; tests get distinct ones from a counter
+// (random picks from a small alphabet collided now and then).
+const CERT_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+let certCounter = 0;
+function nextCertificateId(): string {
+  let n = certCounter++;
+  let tail = "";
+  for (let i = 0; i < 4; i++, n = Math.floor(n / CERT_ALPHABET.length)) tail = CERT_ALPHABET[n % CERT_ALPHABET.length] + tail;
+  return `BDP-TEST-${tail}`;
+}
+
+async function insertSignature(proposalId: string, certificateId = nextCertificateId()): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
     `insert into public.signatures (owner_id, proposal_id, version, signer_name, signer_email, signature_type, signature_text,
        selections, computed_totals, consent_text, consent_given_at, snapshot, document_hash, certificate_id)
@@ -309,7 +320,7 @@ describe("sign_proposal", () => {
     timezone_offset_minutes: 420,
     snapshot: { hello: "world" },
     document_hash: HASH2,
-    certificate_id: `BDP-${"23456789ABCDEFGH"[Math.floor(Math.random() * 16)]}K3Q-92X${"ABCDEFGH"[Math.floor(Math.random() * 8)]}`,
+    certificate_id: nextCertificateId(),
     ...extra,
   });
 
@@ -390,7 +401,7 @@ describe("purge_proposal", () => {
 
   it("deletes a signed proposal only with explicit confirmation, including its signature, and returns its files", async () => {
     const signed = await signedProposal();
-    await insertSignature(signed, "BDP-2222-3333");
+    await insertSignature(signed);
     await db.query(`update public.signatures set pdf_path = $2, pdf_hash = $3 where proposal_id = $1`, [signed, `${signed}/signed.pdf`, HASH]);
     await rejects(purge(signed, owner, true), /Only archived/);
     await db.query(`update public.proposals set status = 'archived' where id = $1`, [signed]);
@@ -405,7 +416,7 @@ describe("purge_proposal", () => {
 
   it("never deletes signed proposals, other owners' proposals, or anything outside a purge", async () => {
     const signed = await signedProposal();
-    await insertSignature(signed, "BDP-4444-5555");
+    await insertSignature(signed);
     await db.query(`update public.proposals set status = 'archived' where id = $1`, [signed]);
     await rejects(purge(signed), /without explicit confirmation/);
     // Signed rows stay undeletable and unchangeable outside a purge, even when archived.
