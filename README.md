@@ -20,14 +20,41 @@ Everything runs on free tiers: Cloudflare Pages + Workers, Supabase, and Resend.
 | 7 | AI (MCP + REST) | ✅ Done |
 | 8 | Polish & deployment docs | ✅ Done |
 
-## Deploying
+## Production
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the step-by-step setup of Supabase, Resend, the Worker, and Pages, plus first-run checks for the Claude.ai and ChatGPT connectors. After that, `pnpm deploy:all` ships migrations, the Worker, and the web app.
+Live at **https://proposals.bridgerdigital.com/app** (clients see proposals at `/p/:slug`).
+
+| Piece | Where |
+|---|---|
+| Web app | Cloudflare Pages project `bridger-proposals-web` |
+| API, MCP, tracking, PDFs, cron | Cloudflare Worker `bridger-proposals-api`. It has no public URL; the Pages project forwards `/api`, `/mcp`, `/oauth`, `/.well-known`, and `/t` to it over a service binding. |
+| Database, auth, file storage | Supabase project `xqluwzjdxzsabqtyysha` (US West) |
+| Email | Resend, sending from `proposals@bridgerdigital.com` |
+| DNS | SiteGround (GoDaddy is only the registrar). `proposals` is a CNAME to `bridger-proposals-web.pages.dev`. Resend's records are on `send` and `resend._domainkey`. The website and Microsoft 365 email records are untouched. |
+
+**Deploys are manual for now.** `pnpm deploy:web`, `deploy:api`, and `deploy:db` release from a local checkout. Pushing to GitHub doesn't deploy anything. The plan is to move to Git-connected Pages plus Workers Builds (push to release) once things are stable. That needs a new Pages project, because Direct Upload projects can't be converted, and the custom domain moved to it.
+
+First-time setup, secrets (`scripts/set-worker-secrets.sh`), and first-run checks are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Open items
+
+- Replace the starter templates' placeholder prices with real rates.
+- Add writing guidelines (Settings → AI & API) so Claude and ChatGPT match Bridger's tone.
+- Turn on "This browser is me" (Settings → Tracking) on each device, so your own views aren't counted.
+- Send Supabase login emails (magic links, password resets) through Resend: Supabase → Authentication → Emails → SMTP (see DEPLOYMENT.md §2). Until then, Supabase's built-in mailer only delivers to members of the Supabase organization, so magic links to `john@bridgerdigital.com` may not arrive. Password login works either way.
+- Switch to Git push-to-release (see Production).
+
+## Known limits
+
+- The owner's signature is **typed only**; drawing it isn't supported. Clients can type or draw.
+- The Worker's `SUPABASE_JWT_SECRET` is a random value, because this Supabase project signs sessions with ES256 (verified via JWKS). HS256 tokens are never accepted.
+- Browser Rendering's free tier (10 browser-minutes/day) limits signed-PDF generation. Failures are retried hourly.
+- Microsoft 365 DKIM isn't set up for bridgerdigital.com. It predates this project and doesn't affect proposal emails (those are signed by Resend), but setting it up would help regular Outlook mail reach inboxes.
 
 ## Stack
 
 - **Web:** React, Vite, Tailwind, TipTap (`apps/web`), deployed to Cloudflare Pages
-- **API:** Cloudflare Worker with Hono (`apps/api`), which serves REST, MCP, OAuth, tracking, and cron jobs
+- **API:** Cloudflare Worker with Hono (`apps/api`), which serves REST, MCP, OAuth, tracking, and cron jobs, reached through the Pages project
 - **Database, auth, storage:** Supabase (`supabase/`)
 - **Shared code:** Zod schemas, block registry, and pricing engine (`packages/shared`)
 

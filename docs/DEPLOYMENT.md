@@ -46,7 +46,7 @@ The Free plan pauses projects after a week without activity. The Worker's hourly
 2. **Domains → Add domain** `bridgerdigital.com`. Add the records it lists in **SiteGround → Site Tools → Domain → DNS Zone Editor**, then click Verify.
    - Resend's records sit on a `send` subdomain and a `resend._domainkey` DKIM record, so they don't touch the Microsoft 365 MX or SPF records on the root domain. Don't edit those.
 3. **API Keys → Create** with "Sending access". Save it.
-4. Optional: to send Supabase password-reset emails through Resend as well, go to **Supabase → Authentication → Emails → SMTP Settings** and use host `smtp.resend.com`, port 465, user `resend`, and the API key as the password.
+4. **Recommended:** send Supabase login emails (magic links, password resets) through Resend as well. Supabase's built-in mailer only delivers to members of the Supabase organization and is limited to a few emails an hour. Create a separate Resend key for it, then go to **Supabase → Authentication → Emails → SMTP Settings** and use host `smtp.resend.com`, port 465, user `resend`, and the API key as the password.
 
 `EMAIL_FROM` defaults to `Bridger Digital <proposals@bridgerdigital.com>` and `OWNER_EMAIL` to `john@bridgerdigital.com`. Change both in `apps/api/wrangler.jsonc` under `vars` if needed.
 
