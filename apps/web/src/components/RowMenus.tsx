@@ -72,13 +72,7 @@ export function ProposalMenu({ proposal: p }: { proposal: ProposalSummary }) {
               toast(`Restored “${p.title}”`);
             }),
           },
-          {
-            label: "Delete permanently",
-            danger: true,
-            disabled: locked,
-            hint: "Signed proposals are legal records and can't be permanently deleted",
-            onSelect: () => setDialog("purge"),
-          },
+          { label: "Delete permanently", danger: true, onSelect: () => setDialog("purge") },
         ]
       : [{ label: "Delete", danger: true, onSelect: () => setDialog("delete") }]),
   ];
@@ -120,15 +114,30 @@ export function ProposalMenu({ proposal: p }: { proposal: ProposalSummary }) {
         onClose={() => setDialog(null)}
         danger
         title={`Permanently delete “${p.title}”?`}
+        confirmText="delete"
         body={
-          <>
-            <p>This erases the proposal, all its published versions, and its activity history. It can't be undone.</p>
-            <p className="mt-2 text-slate-500">Analytics for this proposal are deleted too.</p>
-          </>
+          locked ? (
+            <>
+              <p className="rounded-md bg-red-50 p-3 font-medium text-red-800">This proposal is signed. Deleting it is not recommended.</p>
+              <p className="mt-3">A signed proposal is your record of an agreement. Deleting it permanently erases:</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                <li>the client's signature and the signed PDF</li>
+                <li>the certificate and audit trail that prove who signed, when, and what they agreed to</li>
+                <li>every published version, and all analytics</li>
+              </ul>
+              <p className="mt-3">If there's ever a dispute over scope, price, or payment, you'd have no record to point to, and the client's link and certificate stop working. Keeping it archived hides it from your lists without losing anything.</p>
+              <p className="mt-3 font-medium text-slate-800">This can't be undone. Download the signed PDF first if you might need it.</p>
+            </>
+          ) : (
+            <>
+              <p>This erases the proposal, all its published versions, and its activity history. It can't be undone.</p>
+              <p className="mt-2 text-slate-500">Analytics for this proposal are deleted too.</p>
+            </>
+          )
         }
         confirmLabel="Delete permanently"
         onConfirm={async () => {
-          await api(`/proposals/${p.id}`, { method: "DELETE" });
+          await api(`/proposals/${p.id}${locked ? "?confirmSigned=true" : ""}`, { method: "DELETE" });
           refresh();
           toast(`Permanently deleted “${p.title}”`);
         }}

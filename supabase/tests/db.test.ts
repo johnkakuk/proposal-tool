@@ -47,13 +47,13 @@ async function signedProposal(): Promise<string> {
   return id;
 }
 
-async function insertSignature(proposalId: string): Promise<string> {
+async function insertSignature(proposalId: string, certificateId = "BDP-7K3Q-92XD"): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
     `insert into public.signatures (owner_id, proposal_id, version, signer_name, signer_email, signature_type, signature_text,
        selections, computed_totals, consent_text, consent_given_at, snapshot, document_hash, certificate_id)
-     values ($1, $2, 2, 'Jane Client', 'jane@example.com', 'typed', 'Jane Client', '{}', '{}', 'I agree', now(), '{}', $3, 'BDP-7K3Q-92XD')
+     values ($1, $2, 2, 'Jane Client', 'jane@example.com', 'typed', 'Jane Client', '{}', '{}', 'I agree', now(), '{}', $3, $4)
      returning id`,
-    [owner, proposalId, HASH],
+    [owner, proposalId, HASH, certificateId],
   );
   return rows[0]!.id;
 }
@@ -371,7 +371,7 @@ describe("sign_proposal", () => {
 });
 
 describe("purge_proposal", () => {
-  const purge = (id: string, ownerId = owner) => db.query(`select public.purge_proposal($1, $2)`, [id, ownerId]);
+  const purge = (id: string, ownerId = owner, confirmSigned = false) => db.query<{ bucket: string; path: string }>(`select * from public.purge_proposal($1, $2, $3)`, [id, ownerId, confirmSigned]);
 
   it("permanently deletes an archived, unsigned proposal with its versions and audit trail", async () => {
     const id = await insertProposal(owner);
@@ -388,10 +388,30 @@ describe("purge_proposal", () => {
     expect((await db.query<{ revision_of: string | null }>(`select revision_of from public.proposals where id = $1`, [revision])).rows[0]!.revision_of).toBeNull();
   });
 
+  it("deletes a signed proposal only with explicit confirmation, including its signature, and returns its files", async () => {
+    const signed = await signedProposal();
+    await insertSignature(signed, "BDP-2222-3333");
+    await db.query(`update public.signatures set pdf_path = $2, pdf_hash = $3 where proposal_id = $1`, [signed, `${signed}/signed.pdf`, HASH]);
+    await rejects(purge(signed, owner, true), /Only archived/);
+    await db.query(`update public.proposals set status = 'archived' where id = $1`, [signed]);
+    await rejects(purge(signed), /without explicit confirmation/);
+    const files = (await purge(signed, owner, true)).rows;
+    expect(files).toContainEqual({ bucket: "signed-pdfs", path: `${signed}/signed.pdf` });
+    for (const table of ["proposals", "proposal_versions", "audit_events", "signatures"]) {
+      const col = table === "proposals" ? "id" : "proposal_id";
+      expect((await db.query<{ n: number }>(`select count(*)::int as n from public.${table} where ${col} = $1`, [signed])).rows[0]!.n).toBe(0);
+    }
+  });
+
   it("never deletes signed proposals, other owners' proposals, or anything outside a purge", async () => {
     const signed = await signedProposal();
+    await insertSignature(signed, "BDP-4444-5555");
     await db.query(`update public.proposals set status = 'archived' where id = $1`, [signed]);
-    await rejects(purge(signed), /Signed proposals can't be permanently deleted/);
+    await rejects(purge(signed), /without explicit confirmation/);
+    // Signed rows stay undeletable and unchangeable outside a purge, even when archived.
+    await rejects(db.query(`delete from public.proposals where id = $1`, [signed]), /signed and cannot be deleted/);
+    await rejects(db.query(`delete from public.signatures where proposal_id = $1`, [signed]), /signatures are immutable/);
+    await rejects(db.query(`update public.signatures set signer_name = 'x' where proposal_id = $1`, [signed]), /signatures are immutable/);
     const theirs = await insertProposal(other, "archived");
     await rejects(purge(theirs), /not found/);
     // Outside purge_proposal the append-only rules still hold, even for archived rows.
@@ -399,7 +419,7 @@ describe("purge_proposal", () => {
     await rejects(db.query(`delete from public.audit_events where proposal_id = $1`, [signed]), /immutable/);
     await rejects(db.query(`delete from public.proposal_versions where proposal_id = $1`, [signed]), /immutable/);
     await rejects(
-      asRole(db, "authenticated", owner, (tx) => tx.query(`select public.purge_proposal($1, $2)`, [theirs, owner])),
+      asRole(db, "authenticated", owner, (tx) => tx.query(`select public.purge_proposal($1, $2, true)`, [theirs, owner])),
       /permission denied/,
     );
   });

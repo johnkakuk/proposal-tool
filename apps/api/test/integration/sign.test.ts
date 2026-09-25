@@ -147,6 +147,40 @@ describe("signing", () => {
     }
   });
 
+  it("permanently deletes a signed proposal only with explicit confirmation, removing its files", async () => {
+    await adminDb().from("settings").update({ require_signer_email_otp: false }).neq("owner_id", "00000000-0000-0000-0000-000000000000");
+    try {
+      const p = await publishedProposal(`Purge signed ${run}`);
+      const signed = await publicApi("POST", `/proposals/${p.slug}/sign`, {
+        version: 1,
+        selections: {},
+        signer: signer(`purge.${run}@cascade.test`),
+        signature: { type: "drawn", imageDataUrl: TINY_PNG },
+        consent: true,
+        timezoneOffsetMinutes: 0,
+      });
+      expect(signed.status).toBe(200);
+      const { data: sig } = await adminDb().from("signatures").select("signature_image_path").eq("proposal_id", p.id).single();
+      const image = sig!.signature_image_path as string;
+      expect((await adminDb().storage.from("signatures").download(image)).error).toBeNull();
+
+      await call("POST", `/proposals/${p.id}/archive`);
+      const refused = await call<{ error: { code: string } }>("DELETE", `/proposals/${p.id}`);
+      expect([refused.status, refused.body.error.code]).toEqual([409, "locked"]);
+      expect((await call("DELETE", `/proposals/${p.id}?confirmSigned=true`)).status).toBe(204);
+
+      expect((await call("GET", `/proposals/${p.id}`)).status).toBe(404);
+      for (const table of ["signatures", "proposal_versions", "audit_events"] as const) {
+        const { count } = await adminDb().from(table).select("id", { count: "exact", head: true }).eq("proposal_id", p.id);
+        expect(count).toBe(0);
+      }
+      expect((await adminDb().storage.from("signatures").download(image)).error).not.toBeNull();
+      expect((await publicApi("GET", `/proposals/${p.slug}`)).status).toBe(404);
+    } finally {
+      await adminDb().from("settings").update({ require_signer_email_otp: true }).neq("owner_id", "00000000-0000-0000-0000-000000000000");
+    }
+  });
+
   it("validates input: consent required, bad selections, non-PNG images", async () => {
     const p = await publishedProposal(`Invalid ${run}`);
     const base = { version: 1, selections: {}, signer: signer(`x.${run}@cascade.test`), signature: { type: "typed", text: "Morgan Lee" }, timezoneOffsetMinutes: 0 };

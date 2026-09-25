@@ -80,6 +80,8 @@ test("proposal menu: rename, duplicate, copy link, download PDF, delete and rest
   await pick(page, copy, "Delete permanently");
   const purge = page.getByRole("dialog", { name: `Permanently delete “${copy}”?` });
   await expect(purge).toContainText("can't be undone");
+  await expect(purge.getByRole("button", { name: "Delete permanently" })).toBeDisabled();
+  await purge.getByLabel("Type delete to confirm").fill("delete");
   await purge.getByRole("button", { name: "Delete permanently" }).click();
   await expect(page.getByText(`Permanently deleted “${copy}”`)).toBeVisible();
   await expect(page.getByRole("link", { name: copy, exact: true })).toBeHidden();

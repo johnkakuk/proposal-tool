@@ -7,7 +7,7 @@ Self-hosted proposal builder (Prospero replacement) for Bridger Digital. The ful
 - **TypeScript `strict` everywhere.** Validate every external input (API, MCP, tracking, forms) with Zod schemas from `@bridger/shared`.
 - **Money is integer cents.** Never use floats for money. Quantities and percents allow at most 2 decimals and are converted to integer hundredths (`toHundredths`) before any math.
 - **Pricing math lives only in `packages/shared/src/pricing.ts`.** The client and server both use it. The server always recomputes and never trusts client totals.
-- **Signed proposals are immutable**, enforced by DB triggers (`supabase/migrations/*_immutability.sql`) *and* in app code. The only way forward is "Duplicate as new revision".
+- **Signed proposals are immutable**, enforced by DB triggers (`supabase/migrations/*_immutability.sql`) *and* in app code. The only way forward is "Duplicate as new revision". The single exception is John permanently deleting an **archived** signed proposal: `purge_proposal(id, owner, p_confirm_signed => true)` (human-only route, `?confirmSigned=true`, after typing "delete"), which removes it with its signature, versions, audit trail, and stored files in one transaction. Nothing else may update or delete signed records.
 - **Service-role key stays in Worker secrets.** It must never reach the browser.
 - **The AI never deletes.** MCP tools can archive, not delete.
 
