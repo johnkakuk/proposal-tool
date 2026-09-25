@@ -1,4 +1,5 @@
 import { DeclineSchema, OtpRequestSchema, OtpVerifySchema, SignRequestSchema } from "@bridger/shared";
+import { requestGeo } from "../lib/geo.js";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../env.js";
@@ -16,11 +17,10 @@ import { getPreview } from "../services/preview.js";
 const scale = (c: Context<AppEnv>) => Number(c.env.RATE_LIMIT_SCALE ?? 1) || 1;
 const ip = (c: Context<AppEnv>) => c.req.header("CF-Connecting-IP") ?? "unknown";
 const meta = (c: Context<AppEnv>) => {
-  const cf = (c.req.raw as { cf?: { country?: string; region?: string; city?: string } }).cf;
   return {
     ip: c.req.header("CF-Connecting-IP"),
     userAgent: c.req.header("User-Agent"),
-    geo: cf ? { country: cf.country, region: cf.region, city: cf.city } : undefined,
+    geo: requestGeo(c.req.raw),
   };
 };
 

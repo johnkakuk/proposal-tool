@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "Only run Pages Functions for Worker-proxied paths and /p/* link previews; static assets are served directly.",
+  "include": ["/api/*", "/mcp", "/mcp/*", "/oauth/*", "/.well-known/*", "/t/*", "/p/*"],
+  "exclude": []
+}

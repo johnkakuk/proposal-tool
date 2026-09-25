@@ -6,10 +6,10 @@ The app lives on one hostname, `proposals.bridgerdigital.com`:
 
 | Path | Served by |
 | --- | --- |
-| `/api/*`, `/mcp`, `/oauth/*`, `/.well-known/*`, `/t/*` | Worker `bridger-proposals-api` (routes in `apps/api/wrangler.jsonc`) |
+| `/api/*`, `/mcp`, `/oauth/*`, `/.well-known/*`, `/t/*` | Worker `bridger-proposals-api`, reached through the Pages project (`apps/web/functions/_middleware.ts` forwards these over a service binding) |
 | everything else (`/app`, `/p/:slug`, assets) | Pages project `bridger-proposals-web` |
 
-**Before you start:** the `bridgerdigital.com` DNS zone must be on Cloudflare (free plan is fine). Worker routes only work on zones Cloudflare manages.
+**DNS stays where it is.** `bridgerdigital.com` DNS is hosted at SiteGround (GoDaddy is the registrar), and the website and Microsoft 365 email are unaffected. You add one CNAME for `proposals` plus Resend's records. The Worker has no public URL of its own (`workers_dev: false`); only the Pages project can reach it.
 
 ## 1. Supabase
 
@@ -37,7 +37,8 @@ The Free plan pauses projects after a week without activity. The Worker's hourly
 ## 2. Resend
 
 1. Create an account at [resend.com](https://resend.com) (Free: 3,000 emails/month, 100/day).
-2. **Domains → Add domain** `bridgerdigital.com`. Add the DNS records it lists in Cloudflare DNS, then click Verify.
+2. **Domains → Add domain** `bridgerdigital.com`. Add the records it lists in **SiteGround → Site Tools → Domain → DNS Zone Editor**, then click Verify.
+   - Resend's records sit on a `send` subdomain and a `resend._domainkey` DKIM record, so they don't touch the Microsoft 365 MX or SPF records on the root domain. Don't edit those.
 3. **API Keys → Create** with "Sending access". Save it.
 4. Optional: to send Supabase password-reset emails through Resend as well, go to **Supabase → Authentication → Emails → SMTP Settings** and use host `smtp.resend.com`, port 465, user `resend`, and the API key as the password.
 
@@ -71,7 +72,7 @@ Deploy from the repo root:
 pnpm deploy:api
 ```
 
-The first deploy creates the routes, the two crons (hourly jobs and the 10:00 UTC nightly job), and the Browser Rendering binding. Browser Rendering's free allowance (10 browser-minutes/day) is plenty for PDFs, and failed renders are retried hourly.
+The first deploy creates the two crons (hourly jobs and the 10:00 UTC nightly job), and the Browser Rendering binding. Browser Rendering's free allowance (10 browser-minutes/day) is plenty for PDFs, and failed renders are retried hourly.
 
 ## 4. Cloudflare Pages (web app)
 
@@ -88,9 +89,13 @@ Deploy from the repo root:
 pnpm deploy:web     # builds, then `wrangler pages deploy` (creates the project the first time)
 ```
 
-`apps/web/wrangler.toml` also binds the Pages project to the Worker (`API`), which the `/p/:slug` function uses for link-preview metadata. Deploy the Worker first so the binding resolves.
+`apps/web/wrangler.toml` binds the Pages project to the Worker (`API`). The proxy middleware and the `/p/:slug` link-preview function both use it, so deploy the Worker first. Check that `https://bridger-proposals-web.pages.dev/api/health` returns `{"ok":true,…}`.
 
-Then, in the Cloudflare dashboard: **Workers & Pages → bridger-proposals-web → Custom domains →** add `proposals.bridgerdigital.com`. Cloudflare creates the DNS record.
+Then connect the domain:
+
+1. **Cloudflare → Workers & Pages → bridger-proposals-web → Custom domains → Set up a custom domain:** enter `proposals.bridgerdigital.com`. Cloudflare will show a CNAME to add. Choose the option to configure DNS yourself.
+2. **SiteGround → Site Tools → Domain → DNS Zone Editor → CNAME:** name `proposals`, target `bridger-proposals-web.pages.dev`.
+3. Back in Cloudflare, wait for the domain to show **Active**. The TLS certificate is issued automatically, usually within 15 minutes.
 
 `pnpm deploy:all` runs migrations, the Worker, and Pages in that order for later releases.
 

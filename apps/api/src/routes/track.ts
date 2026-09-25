@@ -1,4 +1,5 @@
 import { MAX_TRACK_BYTES, TrackEventsSchema, TrackSessionSchema } from "@bridger/shared";
+import { requestGeo } from "../lib/geo.js";
 import { Hono, type Context } from "hono";
 import type { AppEnv } from "../env.js";
 import { ApiError } from "../lib/errors.js";
@@ -34,12 +35,11 @@ export const track = new Hono<AppEnv>()
   .post("/session", async (c) => {
     await rateLimit(c.env.RATE_KV, `ts:${ip(c)}`, 60, 3600, scale(c));
     const input = parseOr422(TrackSessionSchema, await json(c));
-    const cf = (c.req.raw as { cf?: { country?: string; region?: string; city?: string } }).cf;
     const { result, background } = await startSession(c.env, serviceClient(c.env), input, {
       ip: ip(c),
       userAgent: c.req.header("User-Agent"),
       cookie: c.req.header("Cookie"),
-      geo: cf ? { country: cf.country, region: cf.region, city: cf.city } : undefined,
+      geo: requestGeo(c.req.raw),
     });
     if (background) c.executionCtx.waitUntil(background);
     return c.json(result);

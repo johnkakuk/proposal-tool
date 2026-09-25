@@ -14,7 +14,7 @@ Self-hosted proposal builder (Prospero replacement) for Bridger Digital. The ful
 ## Layout
 ```
 apps/web        React + Vite SPA (admin /app/*, public viewer /p/:slug) + /functions (Pages Functions, Phase 3)
-apps/api        Cloudflare Worker (Hono): /api/*, /mcp, /oauth/*, /.well-known/*, /t/*, cron
+apps/api        Cloudflare Worker (Hono): /api/*, /mcp, /oauth/*, /.well-known/*, /t/*, cron (reached via the Pages proxy)
 packages/shared Zod schemas, block registry, pricing engine, canonical hashing, ids, validation
 supabase/       migrations, seed/, tests/ (PGlite)
 scripts/        starter-templates.ts + gen-seed-templates.ts
@@ -100,6 +100,8 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 ## Deployment
 - Step by step: `docs/DEPLOYMENT.md`. `pnpm deploy:db` / `deploy:api` / `deploy:web` / `deploy:all`. Don't name a script plain `deploy` at the root, because `pnpm deploy` is a built-in.
 - The production web build reads `apps/web/.env.production.local`.
+- **The domain's DNS isn't on Cloudflare** (SiteGround DNS, GoDaddy registrar), so there are no Worker routes. `proposals.bridgerdigital.com` is a CNAME to the Pages project. `apps/web/functions/_middleware.ts` forwards `/api`, `/mcp`, `/oauth`, `/.well-known`, `/t` to the Worker over the `API` service binding, and `public/_routes.json` limits Functions to those paths plus `/p/*`. The Worker has `workers_dev: false`.
+- Visitor geo: `request.cf` describes the internal hop after the binding, so the proxy sends `X-Bridger-Geo` (always overwritten) and the Worker reads it with `requestGeo()` (`lib/geo.ts`), falling back to `request.cf` in local dev. Add any new Worker path prefix to both `isWorkerPath` and `_routes.json`.
 
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.

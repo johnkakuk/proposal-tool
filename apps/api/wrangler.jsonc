@@ -6,15 +6,11 @@
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
 
-  // Everything else on the hostname is served by Cloudflare Pages.
-  "routes": [
-    { "pattern": "proposals.bridgerdigital.com/api/*", "zone_name": "bridgerdigital.com" },
-    { "pattern": "proposals.bridgerdigital.com/mcp", "zone_name": "bridgerdigital.com" },
-    { "pattern": "proposals.bridgerdigital.com/mcp/*", "zone_name": "bridgerdigital.com" },
-    { "pattern": "proposals.bridgerdigital.com/oauth/*", "zone_name": "bridgerdigital.com" },
-    { "pattern": "proposals.bridgerdigital.com/.well-known/*", "zone_name": "bridgerdigital.com" },
-    { "pattern": "proposals.bridgerdigital.com/t/*", "zone_name": "bridgerdigital.com" }
-  ],
+  // No routes and no workers.dev URL: the Worker is reachable only through the Pages
+  // project's `API` service binding (apps/web/functions/_middleware.ts), which forwards
+  // /api, /mcp, /oauth, /.well-known, and /t. That keeps the domain's DNS wherever it is.
+  "workers_dev": false,
+  "preview_urls": false,
 
   "vars": {
     "APP_URL": "https://proposals.bridgerdigital.com",
