@@ -127,8 +127,16 @@ Then connect the domain:
 
 ## Updating
 
-- **Schema changes:** add a migration under `supabase/migrations`, then `pnpm deploy:db`.
-- **Code:** `pnpm deploy:api` and/or `pnpm deploy:web`. Both are zero-downtime.
+- **Code:** push to `main`. The **Deploy** GitHub Actions workflow (`.github/workflows/deploy.yml`) runs typecheck and unit tests, deploys the Worker, then the web app, then checks `/api/health`. Both deploys are zero-downtime. `pnpm deploy:api` / `deploy:web` still work locally for a hotfix.
+- **Schema changes:** add a migration under `supabase/migrations`, run it with `pnpm deploy:db` **before** pushing code that depends on it. The workflow never touches the database.
+
+### One-time: push-to-deploy setup
+
+1. **Cloudflare → My Profile → API Tokens → Create Token → "Edit Cloudflare Workers"** template. Under Account Resources, pick your account. Add the permission **Account → Cloudflare Pages → Edit**. Create it and copy the token.
+2. **GitHub → the repo → Settings → Secrets and variables → Actions:**
+   - **Secrets** tab: `CLOUDFLARE_API_TOKEN` = the token.
+   - **Variables** tab: `CLOUDFLARE_ACCOUNT_ID` = the account ID (`npx wrangler whoami` shows it), `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` = the same values as `apps/web/.env.production.local`.
+3. Push (or run the workflow from the Actions tab with **Run workflow**) and watch it go green.
 - **Logs:** Workers & Pages → bridger-proposals-api → Logs (observability is on). Emails appear in Resend → Emails and in the app's `email_log` table.
 
 ## Free-tier limits worth knowing

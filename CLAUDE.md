@@ -101,6 +101,7 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - Route errors (including stale chunks after a deploy) render `RouteError`.
 
 ## Deployment
+- **Pushing to `main` deploys** via `.github/workflows/deploy.yml` (typecheck + unit tests → Worker → Pages → health check). Don't push unless John approved it. Migrations are never automatic: `pnpm deploy:db` before pushing code that needs them.
 - Step by step: `docs/DEPLOYMENT.md`. `pnpm deploy:db` / `deploy:api` / `deploy:web` / `deploy:all`. Don't name a script plain `deploy` at the root, because `pnpm deploy` is a built-in.
 - The production web build reads `apps/web/.env.production.local`.
 - **The domain's DNS isn't on Cloudflare** (SiteGround DNS, GoDaddy registrar), so there are no Worker routes. `proposals.bridgerdigital.com` is a CNAME to the Pages project. `apps/web/functions/_middleware.ts` forwards `/api`, `/mcp`, `/oauth`, `/.well-known`, `/t` to the Worker over the `API` service binding, and `public/_routes.json` limits Functions to those paths plus `/p/*`. The Worker has `workers_dev: false`.

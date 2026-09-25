@@ -32,9 +32,7 @@ Ideas that came up after launch, roughly in priority order. Each one notes why i
 ## Later
 
 - **Check for a remount on the Clients page.** In local e2e runs with 460+ clients, going back to Clients re-rendered the whole list and scrolled to the top about 80ms after it appeared, which closed a ⋮ menu that had just opened. A clean database doesn't reproduce it. Look at the lazy route or auth wrapper remounting on back navigation.
-
 - **Drawn owner signature.** The owner signature is typed only; clients can already draw theirs.
-- **Git push-to-release.** A Git-connected Pages project plus Workers Builds, so pushing to `main` deploys (see README → Production).
 - **Automated reminder emails to clients** (listed as out of v1 in SPEC.md).
 - **QuickBooks integration**, e.g. creating an invoice when a proposal is signed (out of v1).
 - **Payment collection** (Stripe or similar; out of v1). It must stay within free tiers or be pay-per-use only.

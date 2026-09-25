@@ -33,7 +33,7 @@ Live at **https://proposals.bridgerdigital.com/app** (clients see proposals at `
 | Email | Resend, sending from `proposals@bridgerdigital.com` |
 | DNS | SiteGround (GoDaddy is only the registrar). `proposals` is a CNAME to `bridger-proposals-web.pages.dev`. Resend's records are on `send` and `resend._domainkey`. The website and Microsoft 365 email records are untouched. |
 
-**Deploys are manual for now.** `pnpm deploy:web`, `deploy:api`, and `deploy:db` release from a local checkout. Pushing to GitHub doesn't deploy anything. The plan is to move to Git-connected Pages plus Workers Builds (push to release) once things are stable. That needs a new Pages project, because Direct Upload projects can't be converted, and the custom domain moved to it.
+**Pushing to `main` deploys.** [.github/workflows/deploy.yml](.github/workflows/deploy.yml) runs the typecheck and unit tests, then deploys the Worker and the web app, then checks `/api/health`. A failing test stops the release. Watch runs under the repo's **Actions** tab. Database migrations stay manual (`pnpm deploy:db`, run *before* pushing code that needs them), and so do the integration and e2e suites, which need Docker. `pnpm deploy:api` / `deploy:web` still work from a laptop for hotfixes.
 
 First-time setup, secrets (`scripts/set-worker-secrets.sh`), and first-run checks are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -44,7 +44,6 @@ First-time setup, secrets (`scripts/set-worker-secrets.sh`), and first-run check
 - Add writing guidelines (Settings → AI & API) so Claude and ChatGPT match Bridger's tone.
 - Turn on "This browser is me" (Settings → Tracking) on each device, so your own views aren't counted.
 - Send Supabase login emails (magic links, password resets) through Resend: Supabase → Authentication → Emails → SMTP (see DEPLOYMENT.md §2). Until then, Supabase's built-in mailer only delivers to members of the Supabase organization, so magic links to `john@bridgerdigital.com` may not arrive. Password login works either way.
-- Switch to Git push-to-release (see Production).
 
 ## Known limits
 
