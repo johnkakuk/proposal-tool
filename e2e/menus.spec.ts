@@ -63,11 +63,26 @@ test("proposal menu: rename, duplicate, copy link, download PDF, delete and rest
   await expect((await page.request.get(url.replace("/p/", "/api/public/proposals/"))).status()).toBe(404);
 
   await page.getByLabel("Filter by status").selectOption("archived");
+  await menuFor(page, renamed).click();
+  await expect(page.getByRole("menu", { name: `Actions for ${renamed}` }).getByRole("menuitem")).toHaveText(["Edit", "Rename", "Duplicate", "Copy link", "Download PDF", "Restore", "Delete permanently"]);
+  await page.keyboard.press("Escape");
   await pick(page, renamed, "Restore");
   await expect(page.getByText(`Restored “${renamed}”`)).toBeVisible();
   await page.getByLabel("Filter by status").selectOption("");
   await expect(page.getByRole("link", { name: renamed, exact: true })).toBeVisible();
   expect((await page.request.get(url.replace("/p/", "/api/public/proposals/"))).status()).toBe(200);
+
+  // Permanent deletion: only from the archive
+  const copy = `${renamed} (copy)`;
+  await pick(page, copy, "Delete");
+  await page.getByRole("dialog", { name: `Delete “${copy}”?` }).getByRole("button", { name: "Delete" }).click();
+  await page.getByLabel("Filter by status").selectOption("archived");
+  await pick(page, copy, "Delete permanently");
+  const purge = page.getByRole("dialog", { name: `Permanently delete “${copy}”?` });
+  await expect(purge).toContainText("can't be undone");
+  await purge.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(page.getByText(`Permanently deleted “${copy}”`)).toBeVisible();
+  await expect(page.getByRole("link", { name: copy, exact: true })).toBeHidden();
 });
 
 test("drafts can't copy a link or download a PDF yet", async ({ page }) => {

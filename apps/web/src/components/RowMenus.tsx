@@ -7,7 +7,7 @@ import { ConfirmDialog, RenameDialog } from "./dialogs";
 import { KebabMenu, type MenuAction } from "./KebabMenu";
 import { useToast } from "./Toaster";
 
-type Dialog = "rename" | "delete" | null;
+type Dialog = "rename" | "delete" | "purge" | null;
 
 /** ⋮ menu for a proposal: Edit, Rename, Duplicate, Copy link, Download PDF, Delete/Restore. */
 export function ProposalMenu({ proposal: p }: { proposal: ProposalSummary }) {
@@ -61,16 +61,25 @@ export function ProposalMenu({ proposal: p }: { proposal: ProposalSummary }) {
         await downloadFromApi(`/proposals/${p.id}/pdf`, `${p.title}.pdf`);
       }),
     },
-    archived
-      ? {
-          label: "Restore",
-          onSelect: run(async () => {
-            await api(`/proposals/${p.id}/restore`, { method: "POST" });
-            refresh();
-            toast(`Restored “${p.title}”`);
-          }),
-        }
-      : { label: "Delete", danger: true, onSelect: () => setDialog("delete") },
+    ...(archived
+      ? [
+          {
+            label: "Restore",
+            onSelect: run(async () => {
+              await api(`/proposals/${p.id}/restore`, { method: "POST" });
+              refresh();
+              toast(`Restored “${p.title}”`);
+            }),
+          },
+          {
+            label: "Delete permanently",
+            danger: true,
+            disabled: locked,
+            hint: "Signed proposals are legal records and can't be permanently deleted",
+            onSelect: () => setDialog("purge"),
+          },
+        ]
+      : [{ label: "Delete", danger: true, onSelect: () => setDialog("delete") }]),
   ];
 
   return (
@@ -103,6 +112,24 @@ export function ProposalMenu({ proposal: p }: { proposal: ProposalSummary }) {
           await api(`/proposals/${p.id}/archive`, { method: "POST" });
           refresh();
           toast(`Deleted “${p.title}”`);
+        }}
+      />
+      <ConfirmDialog
+        open={dialog === "purge"}
+        onClose={() => setDialog(null)}
+        danger
+        title={`Permanently delete “${p.title}”?`}
+        body={
+          <>
+            <p>This erases the proposal, all its published versions, and its activity history. It can't be undone.</p>
+            <p className="mt-2 text-slate-500">Analytics for this proposal are deleted too.</p>
+          </>
+        }
+        confirmLabel="Delete permanently"
+        onConfirm={async () => {
+          await api(`/proposals/${p.id}`, { method: "DELETE" });
+          refresh();
+          toast(`Permanently deleted “${p.title}”`);
         }}
       />
     </>

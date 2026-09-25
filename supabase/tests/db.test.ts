@@ -369,3 +369,38 @@ describe("sign_proposal", () => {
     expect((await db.query<{ email_verified: boolean }>(`select email_verified from public.signatures where proposal_id = $1`, [id])).rows[0]!.email_verified).toBe(true);
   });
 });
+
+describe("purge_proposal", () => {
+  const purge = (id: string, ownerId = owner) => db.query(`select public.purge_proposal($1, $2)`, [id, ownerId]);
+
+  it("permanently deletes an archived, unsigned proposal with its versions and audit trail", async () => {
+    const id = await insertProposal(owner);
+    const upd = (await db.query<{ u: string }>(`select updated_at::text as u from public.proposals where id = $1`, [id])).rows[0]!.u;
+    await db.query(`select public.publish_proposal($1, $2, $3::timestamptz, $4, null, now() + interval '7 days', 'owner', null, null)`, [id, owner, upd, HASH]);
+    const revision = await insertProposal(owner, "draft", { revision_of: id });
+    await rejects(purge(id), /Only archived/);
+    await db.query(`update public.proposals set status = 'archived' where id = $1`, [id]);
+    await purge(id);
+    for (const table of ["proposals", "proposal_versions", "audit_events"]) {
+      const col = table === "proposals" ? "id" : "proposal_id";
+      expect((await db.query<{ n: number }>(`select count(*)::int as n from public.${table} where ${col} = $1`, [id])).rows[0]!.n).toBe(0);
+    }
+    expect((await db.query<{ revision_of: string | null }>(`select revision_of from public.proposals where id = $1`, [revision])).rows[0]!.revision_of).toBeNull();
+  });
+
+  it("never deletes signed proposals, other owners' proposals, or anything outside a purge", async () => {
+    const signed = await signedProposal();
+    await db.query(`update public.proposals set status = 'archived' where id = $1`, [signed]);
+    await rejects(purge(signed), /Signed proposals can't be permanently deleted/);
+    const theirs = await insertProposal(other, "archived");
+    await rejects(purge(theirs), /not found/);
+    // Outside purge_proposal the append-only rules still hold, even for archived rows.
+    await db.query(`insert into public.audit_events (owner_id, proposal_id, event_type, actor) values ($1, $2, 'archived', 'owner')`, [owner, signed]);
+    await rejects(db.query(`delete from public.audit_events where proposal_id = $1`, [signed]), /immutable/);
+    await rejects(db.query(`delete from public.proposal_versions where proposal_id = $1`, [signed]), /immutable/);
+    await rejects(
+      asRole(db, "authenticated", owner, (tx) => tx.query(`select public.purge_proposal($1, $2)`, [theirs, owner])),
+      /permission denied/,
+    );
+  });
+});

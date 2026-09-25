@@ -145,6 +145,17 @@ describe("proposals", () => {
     expect(restored.current_version).toBe(1);
   });
 
+  it("permanently deletes archived, unsigned proposals only", async () => {
+    const p = (await call<ProposalDetail>("POST", "/proposals", { title: `Purge ${run}`, clientId: client.id, templateId: template.id })).body;
+    await call("POST", `/proposals/${p.id}/publish`);
+    expect((await call<{ error: { code: string } }>("DELETE", `/proposals/${p.id}`)).body.error.code).toBe("not_archived");
+    await call("POST", `/proposals/${p.id}/archive`);
+    expect((await call("DELETE", `/proposals/${p.id}`)).status).toBe(204);
+    expect((await call("GET", `/proposals/${p.id}`)).status).toBe(404);
+    const { count } = await adminDb().from("audit_events").select("id", { count: "exact", head: true }).eq("proposal_id", p.id);
+    expect(count).toBe(0);
+  });
+
   it("archives, hiding it from the default list", async () => {
     const p = (await call<ProposalDetail>("POST", "/proposals", { title: `Archive me ${run}` })).body;
     expect((await call<ProposalDetail>("POST", `/proposals/${p.id}/archive`)).body.status).toBe("archived");

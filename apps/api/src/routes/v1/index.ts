@@ -88,6 +88,10 @@ export const v1 = new Hono<AppEnv>()
     });
   })
   .post("/proposals/:id/send-email", async (c) => c.json(await sendProposalEmail(ctx(c), c.env, id(c), await body(c, SendProposalEmailSchema))))
+  .delete("/proposals/:id", async (c) => {
+    await proposals.purgeProposal(ctx(c), id(c));
+    return c.body(null, 204);
+  })
   .post("/proposals/:id/restore", async (c) => c.json(await proposals.restoreProposal(ctx(c), id(c))))
   .post("/proposals/:id/archive", async (c) => c.json(await proposals.archiveProposal(ctx(c), id(c))))
   .post("/proposals/:id/save-as-template", async (c) =>

@@ -248,6 +248,17 @@ export async function restoreProposal(ctx: ServiceContext, id: string): Promise<
   return getProposal(ctx, id);
 }
 
+/**
+ * Permanently deletes an archived, unsigned proposal with its versions and audit trail
+ * (purge_proposal RPC). Signed proposals can't be purged; the database enforces it too.
+ */
+export async function purgeProposal(ctx: ServiceContext, id: string): Promise<void> {
+  const p = await getProposal(ctx, id);
+  if (p.signed_at) throw new ApiError(409, "locked", "Signed proposals can't be permanently deleted.");
+  if (p.status !== "archived") throw new ApiError(409, "not_archived", "Delete (archive) the proposal first; only archived proposals can be permanently deleted.");
+  must(await ctx.db.rpc("purge_proposal", { p_proposal_id: id, p_owner_id: ctx.ownerId }), "delete the proposal");
+}
+
 export async function saveProposalAsTemplate(ctx: ServiceContext, id: string, input: z.output<typeof SaveAsTemplateSchema>): Promise<TemplateDetail> {
   const source = await getProposal(ctx, id);
   return must(
