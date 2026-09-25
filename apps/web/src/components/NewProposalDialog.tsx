@@ -67,9 +67,9 @@ export function NewProposalDialog({ open, onClose }: { open: boolean; onClose: (
 
         {start.kind === "ai" ? (
           <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
-            Claude and ChatGPT will be able to write and publish proposals for you through the MCP connector. Setup instructions land with the AI phase.{" "}
+            Draft the proposal in Claude or ChatGPT: paste your call notes and ask for a proposal. It's saved here as a draft for you to review, with a preview link.{" "}
             <Link to="/app/write-with-ai" className="font-medium text-brand underline" onClick={onClose}>
-              Learn more
+              Setup and a starter prompt
             </Link>
           </div>
         ) : (
