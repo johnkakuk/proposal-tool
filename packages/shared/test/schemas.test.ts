@@ -246,3 +246,20 @@ describe("theme contrast", () => {
     }
   });
 });
+
+describe("pickLogo", () => {
+  it("uses the light logo on dark surfaces and the main logo on light ones", async () => {
+    const { pickLogo } = await import("../src/index.js");
+    const both = { logoUrl: "https://x.test/dark.png", logoOnDarkUrl: "https://x.test/light.png" };
+    expect(pickLogo(both, "#0F2A44")).toEqual({ url: "https://x.test/light.png" });
+    expect(pickLogo(both, "#FFFFFF")).toEqual({ url: "https://x.test/dark.png" });
+  });
+
+  it("falls back to the other version on a contrasting plate, or nothing", async () => {
+    const { pickLogo } = await import("../src/index.js");
+    expect(pickLogo({ logoUrl: "https://x.test/dark.png" }, "#0F2A44")).toEqual({ url: "https://x.test/dark.png", plate: "#FFFFFF" });
+    expect(pickLogo({ logoOnDarkUrl: "https://x.test/light.png" }, "#FAFAF9")).toEqual({ url: "https://x.test/light.png", plate: "#111827" });
+    expect(pickLogo({}, "#FFFFFF")).toBeNull();
+    expect(pickLogo(null, "#FFFFFF")).toBeNull();
+  });
+});

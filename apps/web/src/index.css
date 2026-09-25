@@ -25,6 +25,9 @@ body {
 .proposal-theme {
   color: var(--color-text);
   font-family: var(--font-body);
+  /* Vertical rhythm shared by the editor canvas and the rendered proposal. */
+  --space-block: 2rem; /* between objects, and between an object and prose */
+  --space-h2: 3.125rem; /* above section headings (~50px) */
 }
 
 /* Prose styles apply to top-level prose only (direct children), never to headings or
@@ -49,12 +52,23 @@ body {
 .proposal-prose > h2,
 .proposal-h2 {
   font-size: 1.75rem;
-  margin-top: 1.75rem;
+  margin-top: var(--space-h2);
   margin-bottom: 0.75rem;
 }
 .proposal-prose > h3 {
   font-size: 1.3rem;
   margin-top: 1.5rem;
+}
+/* Editor canvas: objects sit in the prose flow, so give them the same gap the rendered
+   proposal uses (ProposalBlocks' space-y-8), instead of the paragraph gap. */
+.proposal-editor > [data-block-type],
+.proposal-editor > [data-block-type] + :not(h2) {
+  margin-top: var(--space-block);
+}
+/* Rendered proposal: each block is wrapped; margins collapse with space-y-8, so this
+   raises the gap above an H2 heading block to --space-h2. */
+[data-block-type="heading"]:not(:first-child):has(> .proposal-prose > h2) {
+  margin-top: var(--space-h2);
 }
 .proposal-prose > :first-child {
   margin-top: 0;

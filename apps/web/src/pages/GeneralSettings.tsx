@@ -1,10 +1,11 @@
-import { BrandSchema, OwnerSignatureSchema, zodIssues, type Brand, type OwnerSignature } from "@bridger/shared";
+import { BrandSchema, OwnerSignatureSchema, textOn, zodIssues, type Brand, type OwnerSignature } from "@bridger/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { SIGNATURE_FONT } from "../blocks/signature";
 import { useToast } from "../components/Toaster";
 import { Button, ErrorNote, Spinner, inputClass } from "../components/ui";
 import { supabase } from "../lib/supabase";
+import { BrandLogo } from "../render/BrandLogo";
 import { FALLBACK_THEME, ThemeScope, useGoogleFonts } from "../render/ThemeScope";
 
 /**
@@ -66,12 +67,35 @@ function useSaveSettings(id: string | undefined) {
 
 const label = "block text-sm font-medium";
 
+type LogoKey = "logoUrl" | "logoOnDarkUrl";
+
+function LogoField({ title, hint, url, dark, uploading, onUpload, onRemove }: { title: string; hint: string; url?: string; dark: boolean; uploading: boolean; onUpload: (f: File) => void; onRemove: () => void }) {
+  return (
+    <div>
+      <span className={label}>{title}</span>
+      <span className="block text-xs text-slate-500">{hint}</span>
+      <div className="mt-1 flex items-center gap-3">
+        {url ? <img src={url} alt={`Current ${title.toLowerCase()}`} className={`h-10 max-w-40 rounded object-contain p-1 ${dark ? "bg-slate-800" : "bg-slate-100"}`} /> : <span className="text-sm text-slate-500">None yet</span>}
+        <label className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-brand ring-1 ring-slate-300 focus-within:ring-2 focus-within:ring-brand hover:bg-slate-50">
+          {uploading ? "Uploading…" : "Upload"}
+          <input type="file" aria-label={`Upload ${title.toLowerCase()}`} accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} />
+        </label>
+        {url && (
+          <button type="button" className="text-sm text-slate-500 hover:text-red-700" onClick={onRemove}>
+            Remove
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function BrandSettings() {
   const row = useSettingsRow();
   const save = useSaveSettings(row.data?.id);
   const toast = useToast();
   const [brand, setBrand] = useState<Brand | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<LogoKey | null>(null);
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
     if (row.data && !brand) {
@@ -85,21 +109,21 @@ export function BrandSettings() {
   const setColor = (k: keyof Brand["theme"]["colors"]) => (v: string) => setBrand({ ...brand, theme: { ...brand.theme, colors: { ...brand.theme.colors, [k]: v.toUpperCase() } } });
   const setCompany = (k: keyof Brand["company"]) => (v: string) => setBrand({ ...brand, company: { ...brand.company, [k]: v || undefined, ...(k === "name" ? { name: v } : {}) } });
 
-  const upload = async (file: File) => {
+  const upload = async (file: File, key: LogoKey) => {
     setError(null);
     if (file.size > 2 * 1024 * 1024) return setError(new Error("Logos must be under 2 MB."));
-    setUploading(true);
+    setUploading(key);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
-      const path = `${row.data!.owner_id}/logo-${Date.now()}.${ext}`;
+      const path = `${row.data!.owner_id}/${key === "logoOnDarkUrl" ? "logo-light" : "logo"}-${Date.now()}.${ext}`;
       const { error: e } = await supabase.storage.from("assets").upload(path, file, { contentType: file.type, upsert: false });
       if (e) throw e;
       const url = supabase.storage.from("assets").getPublicUrl(path).data.publicUrl;
-      setBrand({ ...brand, theme: { ...brand.theme, logoUrl: url } });
+      setBrand({ ...brand, theme: { ...brand.theme, [key]: url } });
     } catch (e) {
       setError(e);
     } finally {
-      setUploading(false);
+      setUploading(null);
     }
   };
 
@@ -113,21 +137,24 @@ export function BrandSettings() {
     <Section id="brand" title="Brand & company" description="How your proposals and emails look. Changes apply everywhere right away, including proposals you've already sent.">
       <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
         <div className="space-y-4">
-          <div>
-            <span className={label}>Logo</span>
-            <div className="mt-1 flex items-center gap-3">
-              {brand.theme.logoUrl ? <img src={brand.theme.logoUrl} alt="Current logo" className="h-10 max-w-40 rounded bg-slate-100 object-contain p-1" /> : <span className="text-sm text-slate-500">No logo yet</span>}
-              <label className="cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-brand ring-1 ring-slate-300 hover:bg-slate-50">
-                {uploading ? "Uploading…" : "Upload"}
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
-              </label>
-              {brand.theme.logoUrl && (
-                <button type="button" className="text-sm text-slate-500 hover:text-red-700" onClick={() => setBrand({ ...brand, theme: { ...brand.theme, logoUrl: undefined } })}>
-                  Remove
-                </button>
-              )}
-            </div>
-          </div>
+          <LogoField
+            title="Logo"
+            hint="The main version, for light backgrounds."
+            url={brand.theme.logoUrl}
+            dark={false}
+            uploading={uploading === "logoUrl"}
+            onUpload={(f) => void upload(f, "logoUrl")}
+            onRemove={() => setBrand({ ...brand, theme: { ...brand.theme, logoUrl: undefined } })}
+          />
+          <LogoField
+            title="Light logo (optional)"
+            hint="A white or light version for dark backgrounds, like the email header. Without one, the main logo sits on a small white plate there."
+            url={brand.theme.logoOnDarkUrl}
+            dark
+            uploading={uploading === "logoOnDarkUrl"}
+            onUpload={(f) => void upload(f, "logoOnDarkUrl")}
+            onRemove={() => setBrand({ ...brand, theme: { ...brand.theme, logoOnDarkUrl: undefined } })}
+          />
           <fieldset>
             <legend className={label}>Colors</legend>
             <div className="mt-1 grid grid-cols-2 gap-3">
@@ -184,7 +211,7 @@ export function BrandSettings() {
           <ThemeScope theme={brand.theme}>
             <div className="overflow-hidden rounded-lg ring-1 ring-slate-200" style={{ background: "var(--color-background)" }}>
               <div className="flex items-center justify-between border-b border-black/10 px-3 py-2">
-                {brand.theme.logoUrl ? <img src={brand.theme.logoUrl} alt="" className="h-5 w-auto" /> : <span className="font-(family-name:--font-heading) text-sm font-bold text-(--color-primary-text)">{brand.company.name}</span>}
+                <BrandLogo theme={brand.theme} surface={brand.theme.colors.background} alt="" className="h-5 w-auto" fallback={<span className="font-(family-name:--font-heading) text-sm font-bold text-(--color-primary-text)">{brand.company.name}</span>} />
                 <span className="rounded bg-(--color-accent) px-2 py-0.5 text-[10px] font-semibold text-(--color-on-accent)">Accept</span>
               </div>
               <div className="bg-(--color-primary) px-3 py-5 text-(--color-on-primary)">
@@ -197,11 +224,15 @@ export function BrandSettings() {
               </div>
             </div>
           </ThemeScope>
+          <div className="mb-1 mt-4 text-xs font-medium text-slate-500">Email header</div>
+          <div className="rounded-lg px-4 py-3" style={{ background: brand.theme.colors.primary }}>
+            <BrandLogo theme={brand.theme} surface={brand.theme.colors.primary} alt="" className="h-6 w-auto" fallback={<span className="text-sm font-bold" style={{ color: textOn(brand.theme.colors.primary), fontFamily: "Georgia, serif" }}>{brand.company.name}</span>} />
+          </div>
         </div>
       </div>
       <ErrorNote error={error ?? save.error} />
       <div className="mt-4 flex justify-end">
-        <Button variant="primary" onClick={submit} disabled={save.isPending || uploading}>
+        <Button variant="primary" onClick={submit} disabled={save.isPending || uploading !== null}>
           Save brand
         </Button>
       </div>

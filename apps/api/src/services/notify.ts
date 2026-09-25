@@ -73,7 +73,7 @@ export async function notifyOwner(
 // Event-driven notifications
 // ---------------------------------------------------------------------------
 
-/** Signed: signed copy to the signer (always) + the QuickBooks-ready summary to John. */
+/** Signed: signed copy to the signer (always) + the invoicing summary to John. */
 export async function onSigned(env: Env, db: SupabaseClient, signatureId: string, pdf: { bytes: Uint8Array | null; base64: string | null }): Promise<void> {
   const { data: sig } = await db
     .from("signatures")

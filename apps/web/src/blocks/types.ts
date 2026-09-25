@@ -31,6 +31,12 @@ export interface EditorProps<T extends BlockType> {
   blockId: string;
 }
 
+/** Workspace defaults available when an object is inserted from the "/" menu. */
+export interface InsertContext {
+  /** What a new Terms object starts with: the Settings default terms in proposals, the `{{default_terms}}` placeholder in templates. */
+  defaultTerms?: string;
+}
+
 export type MenuGroup = "Basics" | "Sales" | "Content" | "Media" | "Layout";
 
 export interface BlockUI<T extends BlockType> {
@@ -46,7 +52,7 @@ export interface BlockUI<T extends BlockType> {
   /** Hidden from the slash menu (prose types are written directly). */
   hiddenFromMenu?: boolean;
   /** Initial props and aux for a newly inserted object. Defaults to the shared defaultProps. */
-  create?: () => { props: BlockProps<T>; aux: AuxFor<T> };
+  create?: (ctx: InsertContext) => { props: BlockProps<T>; aux: AuxFor<T> };
   /**
    * Called when an object is copied (duplicate button, copy/paste). Regenerate any IDs
    * the object owns so the document stays valid. Pricing uses this for section IDs.

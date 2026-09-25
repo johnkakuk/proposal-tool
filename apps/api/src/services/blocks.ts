@@ -17,6 +17,7 @@ import type { z } from "zod";
 import { ApiError } from "../lib/errors.js";
 import type { ServiceContext } from "./context.js";
 import { getProposal, updateProposal } from "./proposals.js";
+import { getSettings } from "./settings.js";
 
 /**
  * Targeted edits by block ID (SPEC §10.2 insert/update/delete/move_block). Each edit is
@@ -71,9 +72,12 @@ export async function insertBlock(ctx: ServiceContext, proposalId: string, input
   const at = resolvePosition(content, input.position);
   const type = input.block.type as Block["type"];
   const defaults = BLOCK_TYPES.includes(type) ? (blockRegistry[type].defaultProps() as Record<string, unknown>) : {};
+  const props: Record<string, unknown> = { ...defaults, ...input.block.props };
+  // Terms start from the workspace default terms unless the caller wrote their own.
+  if (type === "terms" && !props.markdown) props.markdown = (await getSettings(ctx)).default_terms_markdown;
   const id = input.block.id ?? newBlockId();
   if (content.blocks.some((b) => b.id === id)) throw new ApiError(422, "duplicate_block_id", `A block with id '${id}' already exists. Omit id to generate one.`);
-  const block = validateBlock({ id, type, props: { ...defaults, ...input.block.props }, ...(input.block.hidden ? { hidden: true } : {}) }, `Block ${at + 1}`);
+  const block = validateBlock({ id, type, props, ...(input.block.hidden ? { hidden: true } : {}) }, `Block ${at + 1}`);
   content.blocks.splice(at, 0, block);
   return { proposal: await save(ctx, p, content), blockId: id };
 }

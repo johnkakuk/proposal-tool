@@ -93,8 +93,10 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 
 ## Theming & accessibility
 - Brand colors are John's choice, so `themeToCssVars` (shared `schemas/theme.ts`) derives legible text tokens from them (WCAG AA 4.5:1): `--color-on-primary` / `--color-on-accent` for text on fills, `--color-primary-text` / `--color-accent-text` / `--color-accent-on-primary` for colored text, and `--color-muted` for secondary text. **Never put `text-white` on a brand fill or use opacity for secondary text in blocks/public UI**; use the tokens. Emails use `textOn` / `readableOn` the same way.
+- Logos: `theme.logoUrl` (main, for light backgrounds) and optional `theme.logoOnDarkUrl`. Always render the owner logo through `pickLogo(theme, surfaceColor)` (web: `<BrandLogo>`), which picks the version for that background and falls back to a contrasting plate.
 - Portaled UI (`PublicModal`) sits outside the `ThemeScope` div, so it gets the variables through `useThemeVars()`.
 - Admin UI: secondary text is `text-slate-500` minimum (never `-400`). `e2e/a11y.spec.ts` runs axe (WCAG 2.1 A/AA) on the main screens and fails on serious or critical violations.
+- Vertical rhythm: `--space-block` (2rem between objects) and `--space-h2` (~50px above H2s) on `.proposal-theme` apply to both the editor canvas and the rendered proposal (`index.css`). Adjust spacing there, not per block.
 - Route errors (including stale chunks after a deploy) render `RouteError`.
 
 ## Deployment

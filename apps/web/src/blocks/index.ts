@@ -14,7 +14,7 @@ import { team } from "./team";
 import { terms } from "./terms";
 import { testimonial } from "./testimonial";
 import { timeline } from "./timeline";
-import type { BlockUI, BlockUIRegistry, MenuGroup } from "./types";
+import type { BlockUI, BlockUIRegistry, InsertContext, MenuGroup } from "./types";
 import { video } from "./video";
 
 /**
@@ -53,8 +53,8 @@ export const blockLabel = (type: BlockType) => blockRegistry[type].label;
 export const MENU_GROUP_ORDER: MenuGroup[] = ["Basics", "Sales", "Content", "Media", "Layout"];
 
 /** Initial props + aux for a newly inserted object. */
-export function createBlockValue<T extends BlockType>(type: T) {
+export function createBlockValue<T extends BlockType>(type: T, ctx: InsertContext = {}) {
   const ui = getBlockUI(type);
-  if (ui.create) return ui.create();
+  if (ui.create) return ui.create(ctx);
   return { props: blockRegistry[type].defaultProps() as never, aux: null as never };
 }

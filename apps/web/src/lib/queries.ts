@@ -88,7 +88,7 @@ export function useWorkspaceSettings() {
       if (error) throw error;
       const brand = BrandSchema.safeParse(data?.brand);
       const sig = OwnerSignatureSchema.safeParse(data?.owner_signature);
-      return { brand: brand.success ? brand.data : null, ownerSignatureName: sig.success ? sig.data.name : undefined };
+      return { brand: brand.success ? brand.data : null, ownerSignatureName: sig.success ? sig.data.name : undefined, defaultTerms: (data?.default_terms_markdown as string | undefined) ?? "" };
     },
   });
 }

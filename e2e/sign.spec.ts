@@ -54,8 +54,9 @@ test("publish → open → choose options → verify email → sign → locked, 
   await sign.getByRole("button", { name: "Sign & Accept" }).click();
   const done = pub.getByRole("dialog", { name: "Thank you!" });
   await expect(done).toBeVisible();
-  await pub.keyboard.press("Escape"); // not dismissable by Esc…
-  await expect(done).toBeVisible();
+  await done.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(done).toBeHidden();
+  await expect(pub.getByRole("button", { name: "Accept & sign" })).toHaveCount(0);
 
   // The page reflects the signature and the client's choices
   await pub.reload();

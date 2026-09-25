@@ -6,6 +6,7 @@ Everything runs on free tiers: Cloudflare Pages + Workers, Supabase, and Resend.
 
 - **Product and technical spec:** [SPEC.md](SPEC.md)
 - **Conventions for contributors (and Claude Code):** [CLAUDE.md](CLAUDE.md)
+- **What's next:** [docs/ROADMAP.md](docs/ROADMAP.md)
 
 ## Status
 
@@ -39,6 +40,7 @@ First-time setup, secrets (`scripts/set-worker-secrets.sh`), and first-run check
 ## Open items
 
 - Replace the starter templates' placeholder prices with real rates.
+- Upload a light version of the logo (Settings → Brand → Light logo). Until then, emails show the main logo on a white plate in the navy header.
 - Add writing guidelines (Settings → AI & API) so Claude and ChatGPT match Bridger's tone.
 - Turn on "This browser is me" (Settings → Tracking) on each device, so your own views aren't counted.
 - Send Supabase login emails (magic links, password resets) through Resend: Supabase → Authentication → Emails → SMTP (see DEPLOYMENT.md §2). Until then, Supabase's built-in mailer only delivers to members of the Supabase organization, so magic links to `john@bridgerdigital.com` may not arrive. Password login works either way.

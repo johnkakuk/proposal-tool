@@ -54,7 +54,7 @@ export function SigningModal({
   const steps = proposal.requireOtp ? 3 : 2;
 
   return (
-    <PublicModal open={open} onClose={onClose} title={title} dismissable={step !== "done"}>
+    <PublicModal open={open} onClose={onClose} title={title}>
       {stepNumber > 0 && (
         <p className="-mt-3 mb-5 text-sm text-(--color-muted)">
           Step {stepNumber} of {steps}
@@ -111,7 +111,12 @@ export function SigningModal({
           }}
         />
       ) : (
-        <p>Your acceptance has been recorded. You'll receive a signed copy by email, and you can download it from this page once it's ready.</p>
+        <div className="space-y-5">
+          <p>Your acceptance has been recorded. You'll receive a signed copy by email, and you can download it from this page once it's ready.</p>
+          <button type="button" className={primaryButton} onClick={onClose} autoFocus>
+            Close
+          </button>
+        </div>
       )}
       {error && !stale && (
         <p role="alert" className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800">

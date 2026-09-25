@@ -56,6 +56,19 @@ describe("proposals", () => {
     expect(r.body.content.blocks[0]!.props).toMatchObject({ title: "Blank test", clientName: `Peak Plumbing ${run}` });
   });
 
+  it("inserts a Terms block pre-filled with the default terms unless terms are given", async () => {
+    const p = (await call<ProposalDetail>("POST", "/proposals", { title: "Terms test", clientId: client.id })).body;
+    const defaultTerms = (await call<{ defaultTermsMarkdown: string }>("GET", "/workspace/context")).body.defaultTermsMarkdown;
+    const inserted = await call<{ proposal: ProposalDetail; blockId: string }>("POST", `/proposals/${p.id}/blocks`, { block: { type: "terms" } });
+    expect(inserted.status).toBe(201);
+    const block = inserted.body.proposal.content.blocks.find((b) => b.id === inserted.body.blockId)!;
+    expect(block.props).toMatchObject({ title: "Terms & Conditions", markdown: defaultTerms });
+    expect(defaultTerms.length).toBeGreaterThan(0);
+
+    const custom = await call<{ proposal: ProposalDetail; blockId: string }>("POST", `/proposals/${p.id}/blocks`, { block: { type: "terms", props: { markdown: "Net 15." } } });
+    expect(custom.body.proposal.content.blocks.find((b) => b.id === custom.body.blockId)!.props).toMatchObject({ markdown: "Net 15." });
+  });
+
   it("creates from a template, filling in placeholders and computing totals", async () => {
     const r = await call<ProposalDetail>("POST", "/proposals", { title: "From template", clientId: client.id, templateId: template.id });
     expect(r.status).toBe(201);

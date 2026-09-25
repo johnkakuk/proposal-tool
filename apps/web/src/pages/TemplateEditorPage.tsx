@@ -25,6 +25,9 @@ interface Draft {
   pricing: Pricing;
 }
 
+/** Templates keep the placeholder, so each proposal gets the terms current when it's created. */
+const TEMPLATE_INSERT_CONTEXT = { defaultTerms: "{{default_terms}}" };
+
 /** Same editor as proposals, without client, expiry, or status (SPEC §7.4). */
 function TemplateEditorLoaded({ template, brand, ownerSignatureName }: { template: TemplateDetail; brand: Theme | null; ownerSignatureName?: string }) {
   const [name, setName] = useState(template.name);
@@ -55,6 +58,7 @@ function TemplateEditorLoaded({ template, brand, ownerSignatureName }: { templat
       onRetrySave={() => void flush()}
       brand={brand}
       ownerSignatureName={ownerSignatureName}
+      insertContext={TEMPLATE_INSERT_CONTEXT}
       heading={
         <>
           <Link to="/app/templates" className="shrink-0 rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 hover:text-ink" aria-label="Back to templates">

@@ -66,7 +66,7 @@ describe("send email to client", () => {
 });
 
 describe("signed", () => {
-  it("emails the signer and John once; John's email has the QuickBooks checklist", async () => {
+  it("emails the signer and John once; John's email lists what to invoice", async () => {
     await adminDb().from("settings").update({ require_signer_email_otp: false }).eq("owner_id", ownerId);
     try {
       const p = await published(`Signed ${run}`, {
@@ -120,9 +120,11 @@ describe("signed", () => {
       expect(owner[0]!.text).toContain("Returning client discount: −$500.00");
       expect(owner[0]!.text).toContain("One-time total: $4,000.00");
       expect(owner[0]!.text).toContain("Monthly total: $1,250.00/month");
-      expect(owner[0]!.text).toContain(`[ ] Create invoice in QuickBooks: $4,000.00 one-time (Birchwood ${run})`);
-      expect(owner[0]!.text).toContain(`[ ] Set up a recurring invoice in QuickBooks: $1,250.00/month (Birchwood ${run})`);
-      expect(owner[0]!.html).toContain("☐ Create invoice in QuickBooks");
+      expect(owner[0]!.text).toContain(`- Create invoice: $4,000.00 one-time (Birchwood ${run})`);
+      expect(owner[0]!.text).toContain(`- Set up a recurring invoice: $1,250.00/month (Birchwood ${run})`);
+      expect(owner[0]!.html).toContain("<li style=\"margin:0 0 6px\">Create invoice: ");
+      expect(owner[0]!.html).not.toContain("☐");
+      expect(owner[0]!.text).not.toContain("QuickBooks");
     } finally {
       await adminDb().from("settings").update({ require_signer_email_otp: true }).eq("owner_id", ownerId);
     }

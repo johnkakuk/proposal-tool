@@ -1,11 +1,12 @@
-import type { PublicProposal, Selections } from "@bridger/shared";
+import { resolveTheme, type PublicProposal, type Selections } from "@bridger/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { cadenceParts, money } from "../blocks/pricing/format";
 import { formatIsoDate } from "../render/format";
 import { ProposalBlocks, RenderProvider, useRenderContextValue } from "../render/ProposalRenderer";
-import { ThemeScope } from "../render/ThemeScope";
+import { BrandLogo } from "../render/BrandLogo";
+import { FALLBACK_THEME, ThemeScope } from "../render/ThemeScope";
 import { NotAvailableError, fetchCertificate, fetchPublicProposal, requestExtension, signedPdfUrl } from "./api";
 import { CertificateDetails } from "./Certificate";
 import { DeclineDialog } from "./DeclineDialog";
@@ -95,11 +96,13 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
         {!print && (
           <header className="sticky top-0 z-10 border-b border-black/10 bg-(--color-background)/95 backdrop-blur print:hidden">
             <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3">
-              {proposal.brand.theme?.logoUrl ? (
-                <img src={proposal.brand.theme.logoUrl} alt={proposal.brand.company?.name ?? ""} className="h-8 w-auto" />
-              ) : (
-                <span className="font-(family-name:--font-heading) font-bold text-(--color-primary-text)">{proposal.brand.company?.name ?? "Proposal"}</span>
-              )}
+              <BrandLogo
+                theme={proposal.brand.theme}
+                surface={resolveTheme(proposal.brand.theme ?? FALLBACK_THEME, doc.content.theme).colors.background}
+                alt={proposal.brand.company?.name ?? ""}
+                className="h-8 w-auto"
+                fallback={<span className="font-(family-name:--font-heading) font-bold text-(--color-primary-text)">{proposal.brand.company?.name ?? "Proposal"}</span>}
+              />
               <div className="ml-auto flex items-center gap-4">
                 {value.result && value.pricing.sections.length > 0 && (
                   <div className="text-right text-sm leading-tight tabular-nums" aria-live="polite" aria-label="Current total">

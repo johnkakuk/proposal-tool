@@ -8,6 +8,7 @@ import { BlockIds } from "./extensions/blockIds";
 import { ProposalObject } from "./extensions/proposalObject";
 import { SlashCommand } from "./extensions/slashCommand";
 import { proseKit } from "./prose";
+import type { InsertContext } from "../blocks/types";
 
 interface Props {
   content: ProposalContent;
@@ -16,6 +17,8 @@ interface Props {
   /** Called with the serialized document on load and after every change. */
   onChange: (doc: SerializedDocument) => void;
   onEditor?: (editor: Editor | null) => void;
+  /** Workspace defaults for objects inserted with "/" (e.g. default terms). */
+  insertContext?: InsertContext;
 }
 
 /**
@@ -23,7 +26,7 @@ interface Props {
  * `content`/`pricing` are read once, when the editor mounts; remount (change `key`) to load
  * a different document.
  */
-export function ProposalEditor({ content, pricing, editable, onChange, onEditor }: Props) {
+export function ProposalEditor({ content, pricing, editable, onChange, onEditor, insertContext }: Props) {
   const initial = useRef(toEditorDocument(content, pricing));
   const theme = useRef(content.theme);
   const onChangeRef = useRef(onChange);
@@ -51,6 +54,10 @@ export function ProposalEditor({ content, pricing, editable, onChange, onEditor 
   useEffect(() => {
     editor?.setEditable(editable);
   }, [editor, editable]);
+
+  useEffect(() => {
+    if (editor) editor.storage.proposalObject.insertContext = insertContext ?? {};
+  }, [editor, insertContext]);
 
   useEffect(() => {
     onEditor?.(editor);

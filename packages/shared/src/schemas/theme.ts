@@ -15,7 +15,10 @@ export const ThemeSchema = z.object({
   colors: ThemeColorsSchema,
   headingFont: FontFamilySchema,
   bodyFont: FontFamilySchema,
+  /** The main logo, for light backgrounds (usually a dark logo). */
   logoUrl: UrlSchema.optional(),
+  /** Optional light version for dark backgrounds (email header, dark themes). */
+  logoOnDarkUrl: UrlSchema.optional(),
 });
 export type Theme = z.infer<typeof ThemeSchema>;
 
@@ -50,6 +53,7 @@ export function resolveTheme(brand: Theme, overrides?: ThemeOverrides): Theme & 
     headingFont: overrides?.headingFont ?? brand.headingFont,
     bodyFont: overrides?.bodyFont ?? brand.bodyFont,
     ...(brand.logoUrl ? { logoUrl: brand.logoUrl } : {}),
+    ...(brand.logoOnDarkUrl ? { logoOnDarkUrl: brand.logoOnDarkUrl } : {}),
     ...(overrides?.clientLogoUrl ? { clientLogoUrl: overrides.clientLogoUrl } : {}),
   };
 }
@@ -127,4 +131,27 @@ export function themeToCssVars(theme: Theme): Record<string, string> {
     "--font-heading": `"${theme.headingFont}", ui-serif, Georgia, serif`,
     "--font-body": `"${theme.bodyFont}", ui-sans-serif, system-ui, sans-serif`,
   };
+}
+
+export interface LogoChoice {
+  url: string;
+  /**
+   * Set when only the version meant for the other kind of background exists: draw it on
+   * a small plate of this color so it stays visible (white behind a dark logo, ink behind
+   * a light one).
+   */
+  plate?: string;
+}
+
+/**
+ * Which logo to show on a surface of color `surface`: the light version on dark
+ * backgrounds, the main one on light backgrounds. If only one exists, it's used either
+ * way, on a contrasting plate when it was made for the other kind of background.
+ */
+export function pickLogo(theme: Pick<Theme, "logoUrl" | "logoOnDarkUrl"> | null | undefined, surface: string): LogoChoice | null {
+  const dark = textOn(surface) === PAPER;
+  const [preferred, fallback] = dark ? [theme?.logoOnDarkUrl, theme?.logoUrl] : [theme?.logoUrl, theme?.logoOnDarkUrl];
+  if (preferred) return { url: preferred };
+  if (fallback) return { url: fallback, plate: dark ? PAPER : INK };
+  return null;
 }

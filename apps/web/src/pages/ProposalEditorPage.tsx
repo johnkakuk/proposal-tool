@@ -1,6 +1,6 @@
 import type { ClientRow, Pricing, ProposalContent, ProposalDetail } from "@bridger/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { AnalyticsDrawer, type CanvasView } from "../analytics/AnalyticsDrawer";
 import { VersionCanvas } from "../analytics/HeatmapView";
@@ -27,7 +27,7 @@ export function ProposalEditorPage() {
   if (isLoading || settings.isLoading) return <Spinner />;
   if (error || !proposal) return <div className="p-8"><ErrorNote error={error ?? new Error("Proposal not found")} /></div>;
   // Remount per proposal so the editor loads fresh content.
-  return <ProposalEditorLoaded key={proposal.id} proposal={proposal} brand={settings.data?.brand?.theme ?? null} ownerSignatureName={settings.data?.ownerSignatureName} />;
+  return <ProposalEditorLoaded key={proposal.id} proposal={proposal} brand={settings.data?.brand?.theme ?? null} ownerSignatureName={settings.data?.ownerSignatureName} defaultTerms={settings.data?.defaultTerms} />;
 }
 
 interface SignatureSummary {
@@ -47,7 +47,8 @@ interface PublishResponse {
   publicUrl: string;
 }
 
-function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposal: ProposalDetail; brand: import("@bridger/shared").Theme | null; ownerSignatureName?: string }) {
+function ProposalEditorLoaded({ proposal, brand, ownerSignatureName, defaultTerms }: { proposal: ProposalDetail; brand: import("@bridger/shared").Theme | null; ownerSignatureName?: string; defaultTerms?: string }) {
+  const insertContext = useMemo(() => ({ defaultTerms }), [defaultTerms]);
   const locked = Boolean(proposal.signed_at) || proposal.status === "archived";
   const [title, setTitle] = useState(proposal.title);
   const [clientId, setClientId] = useState<string | null>(proposal.client_id);
@@ -152,6 +153,7 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
         onRetrySave={conflict ? () => window.location.reload() : () => void flush()}
         brand={brand}
         ownerSignatureName={ownerSignatureName}
+        insertContext={insertContext}
         publishCheck={locked ? undefined : { clientHasEmail: Boolean(client?.email) }}
         heading={
           <>
@@ -295,7 +297,8 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
         <p className="text-sm text-slate-600">Anyone with this link can view it. Send it to your client, or copy it into an email.</p>
         <div className="mt-4 flex gap-2">
           <input readOnly aria-label="Proposal link" className={`${inputClass} font-mono text-xs`} value={share ?? ""} onFocus={(e) => e.target.select()} />
-          <Button variant="primary" onClick={() => void copyLink()}>
+          {/* Fixed width so "Copy" → "Copied ✓" doesn't wrap or shift the input. */}
+          <Button variant="primary" className="w-24 shrink-0 whitespace-nowrap" onClick={() => void copyLink()}>
             {copied ? "Copied ✓" : "Copy"}
           </Button>
         </div>

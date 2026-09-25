@@ -34,7 +34,7 @@ export function PublicModal({ open, onClose, title, children, dismissable = true
               {title}
             </h2>
             {dismissable && (
-              <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-(--color-muted) hover:text-(--color-text)">
+              <button type="button" onClick={onClose} aria-label="Close dialog" className="rounded p-1 text-(--color-muted) hover:text-(--color-text)">
                 ✕
               </button>
             )}

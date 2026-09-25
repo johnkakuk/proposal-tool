@@ -8,7 +8,7 @@ export const deliverables: BlockUI<"deliverables"> = {
   Renderer: ({ props }) => (
     <section>
       {props.title && <h2 className="proposal-h2">{props.title}</h2>}
-      <div className="grid gap-4 @lg:grid-cols-2">
+      <div className={`grid gap-4 @lg:grid-cols-2 ${props.title ? "mt-5" : "pt-4"}`}>
         {props.items.map((item, i) => (
           <div key={i} className="flex gap-3 rounded-lg border border-black/10 p-4">
             <span aria-hidden className="text-2xl leading-none">

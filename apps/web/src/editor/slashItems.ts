@@ -47,7 +47,7 @@ function countObjects(editor: Editor, type: BlockType): number {
 
 /** Inserts a new object and opens its editor. */
 export function insertObject(editor: Editor, range: Range, type: BlockType) {
-  const { props, aux } = createBlockValue(type);
+  const { props, aux } = createBlockValue(type, editor.storage.proposalObject.insertContext);
   const blockId = newBlockId();
   editor.storage.proposalObject.edits.pending.add(blockId);
   editor

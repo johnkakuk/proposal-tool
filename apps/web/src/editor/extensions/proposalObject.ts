@@ -1,6 +1,7 @@
 import { mergeAttributes, Node } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import type { InsertContext } from "../../blocks/types";
 import { OBJECT_NODE, type ObjectAttrs } from "../convert";
 import { ObjectNodeView } from "../ObjectNodeView";
 
@@ -13,7 +14,7 @@ export interface ObjectEditRequests {
 
 declare module "@tiptap/core" {
   interface Storage {
-    proposalObject: { edits: ObjectEditRequests };
+    proposalObject: { edits: ObjectEditRequests; insertContext: InsertContext };
   }
 }
 
@@ -48,7 +49,8 @@ export const ProposalObject = Node.create({
         this.listeners.forEach((l) => l(blockId));
       },
     };
-    return { edits };
+    const insertContext: InsertContext = {};
+    return { edits, insertContext };
   },
 
   // Copy/paste within the editor carries the object's data but not its ID; BlockIds assigns

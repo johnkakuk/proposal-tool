@@ -76,13 +76,13 @@ export function ownerSigned(x: SignedEmailInput): EmailContent {
   const totalsRows: [string, string][] = CADENCE.filter((c) => x.totals.total[c] > 0).map((c) => [c === "one_time" ? "One-time total" : `${c[0]!.toUpperCase()}${c.slice(1)} total`, money(x.totals.total[c], c)]);
   if (x.totals.tax) totalsRows.push([`Includes tax (${x.totals.tax.ratePct}%)`, totalLines(x.totals.tax.byCadence)]);
 
-  // The QuickBooks checklist replaces any in-app invoice reminder (SPEC §9).
+  // Invoicing next steps replace any in-app invoice reminder (SPEC §9). Provider-neutral on purpose.
   const checklist: string[] = [];
-  if (x.totals.total.one_time > 0) checklist.push(`Create invoice in QuickBooks: ${money(x.totals.total.one_time)} one-time (${x.client})`);
+  if (x.totals.total.one_time > 0) checklist.push(`Create invoice: ${money(x.totals.total.one_time)} one-time (${x.client})`);
   for (const c of ["monthly", "quarterly", "yearly"] as const) {
-    if (x.totals.total[c] > 0) checklist.push(`Set up a recurring invoice in QuickBooks: ${money(x.totals.total[c], c)} (${x.client})`);
+    if (x.totals.total[c] > 0) checklist.push(`Set up a recurring invoice: ${money(x.totals.total[c], c)} (${x.client})`);
   }
-  if (checklist.length === 0) checklist.push(`Create invoice in QuickBooks for ${x.client}`);
+  if (checklist.length === 0) checklist.push(`Create invoice for ${x.client}`);
 
   const signerLine = `${x.signer.name}${x.signer.title ? `, ${x.signer.title}` : ""}${x.signer.company ? ` · ${x.signer.company}` : ""} (${x.signer.email})`;
   const html = [
@@ -93,7 +93,7 @@ export function ownerSigned(x: SignedEmailInput): EmailContent {
     `<h2 style="margin:24px 0 8px;font:700 16px Arial,sans-serif">Totals</h2>`,
     table(totalsRows.length ? totalsRows : [["Total", formatCents(0)]], { bold: true }),
     `<h2 style="margin:24px 0 8px;font:700 16px Arial,sans-serif">Next step</h2>`,
-    `<ul style="margin:0 0 16px;padding-left:0;list-style:none">${checklist.map((c) => `<li style="margin:0 0 6px">☐ ${e(c)}</li>`).join("")}</ul>`,
+    `<ul style="margin:0 0 16px;padding-left:20px">${checklist.map((c) => `<li style="margin:0 0 6px">${e(c)}</li>`).join("")}</ul>`,
     p(`<a href="${e(x.pdfUrl)}">Signed PDF</a> · <a href="${e(x.certificateUrl)}">Certificate ${e(x.certificateId)}</a>`),
   ].join("\n");
   const text = [
@@ -107,7 +107,7 @@ export function ownerSigned(x: SignedEmailInput): EmailContent {
     ...totalsRows.map(([k, v]) => `  ${k}: ${v}`),
     "",
     "Next step:",
-    ...checklist.map((c) => `  [ ] ${c}`),
+    ...checklist.map((c) => `  - ${c}`),
     "",
     `Signed PDF: ${x.pdfUrl}`,
     `Certificate ${x.certificateId}: ${x.certificateUrl}`,

@@ -1,4 +1,4 @@
-import { readableOn, textOn, type Brand } from "@bridger/shared";
+import { pickLogo, readableOn, textOn, type Brand } from "@bridger/shared";
 import { escapeHtml } from "../lib/email.js";
 
 /**
@@ -27,7 +27,9 @@ const FALLBACK = { primary: "#0F2A44", accent: "#E07A1F", text: "#1B1F24" };
 export function layout(input: LayoutInput): { html: string; text: string } {
   const c = input.brand?.theme.colors ?? FALLBACK;
   const company = input.brand?.company.name ?? "Bridger Digital";
-  const logo = input.brand?.theme.logoUrl;
+  // The header is a primary-color band, so pick the logo version that reads on it.
+  const logo = pickLogo(input.brand?.theme, c.primary);
+  const logoImg = logo && `<img src="${escapeHtml(logo.url)}" alt="${escapeHtml(company)}" height="32" style="display:block;height:32px">`;
   const button = input.cta
     ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0 8px"><tr><td style="border-radius:6px;background:${c.accent}"><a href="${escapeHtml(input.cta.url)}" style="display:inline-block;padding:12px 22px;font-weight:600;color:${textOn(c.accent)};text-decoration:none;font-family:Arial,sans-serif">${escapeHtml(input.cta.label)}</a></td></tr></table>`
     : "";
@@ -38,7 +40,11 @@ export function layout(input: LayoutInput): { html: string; text: string } {
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f5f7"><tr><td align="center" style="padding:32px 12px">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden">
 <tr><td style="background:${c.primary};padding:20px 32px">${
-    logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(company)}" height="32" style="display:block;height:32px">` : `<span style="color:${textOn(c.primary)};font:700 18px Georgia,serif">${escapeHtml(company)}</span>`
+    logo
+      ? logo.plate
+        ? `<table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:${logo.plate};border-radius:6px;padding:6px 10px">${logoImg}</td></tr></table>`
+        : logoImg
+      : `<span style="color:${textOn(c.primary)};font:700 18px Georgia,serif">${escapeHtml(company)}</span>`
   }</td></tr>
 <tr><td style="padding:32px;font:15px/1.6 Arial,Helvetica,sans-serif;color:${readableOn(c.text, "#FFFFFF")}">
 <h1 style="margin:0 0 16px;font:700 22px/1.3 Georgia,serif;color:${readableOn(c.primary, "#FFFFFF")}">${escapeHtml(input.heading)}</h1>

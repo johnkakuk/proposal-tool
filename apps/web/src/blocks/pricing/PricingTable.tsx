@@ -54,7 +54,7 @@ function Section({ section, computed, selected, onSelect }: { section: PricingSe
                 aria-checked={on}
                 disabled={!interactive}
                 onClick={() => toggle(line.itemId)}
-                className={`rounded-xl border-2 p-5 text-left transition ${on ? "border-(--color-accent) bg-(--color-accent)/5" : "border-black/10"} ${interactive ? "cursor-pointer hover:border-(--color-accent)/60" : "cursor-default"}`}
+                className={`flex flex-col justify-start rounded-xl border-2 p-5 text-left transition ${on ? "border-(--color-accent) bg-(--color-accent)/5" : "border-black/10"} ${interactive ? "cursor-pointer hover:border-(--color-accent)/60" : "cursor-default"}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-semibold">{line.name}</span>

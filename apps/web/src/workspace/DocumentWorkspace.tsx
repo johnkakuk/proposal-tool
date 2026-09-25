@@ -9,6 +9,7 @@ import { ProposalEditor } from "../editor/ProposalEditor";
 import { assemblePricing, type SerializedDocument } from "../editor/convert";
 import { ProposalBlocks, RenderProvider, useRenderContextValue } from "../render/ProposalRenderer";
 import { Button, inputClass } from "../components/ui";
+import type { InsertContext } from "../blocks/types";
 import type { SaveState } from "./useAutosave";
 
 type Device = "desktop" | "mobile";
@@ -23,6 +24,8 @@ export interface DocumentWorkspaceProps {
   onRetrySave?: () => void;
   brand: Theme | null;
   ownerSignatureName?: string;
+  /** Workspace defaults for objects inserted with "/". */
+  insertContext?: InsertContext;
   /** Left side of the top bar (back link, title). */
   heading: ReactNode;
   /** Right side of the top bar (page actions). */
@@ -119,7 +122,7 @@ export function DocumentWorkspace(p: DocumentWorkspaceProps) {
             >
               {/* The editor stays mounted in preview so undo history survives. */}
               <div hidden={preview}>
-                <ProposalEditor content={p.initialContent} pricing={p.initialPricing} editable={!p.readOnly} onChange={handleDocChange} onEditor={onEditor} />
+                <ProposalEditor content={p.initialContent} pricing={p.initialPricing} editable={!p.readOnly} onChange={handleDocChange} onEditor={onEditor} insertContext={p.insertContext} />
               </div>
               {preview && <ProposalBlocks content={content} />}
             </div>

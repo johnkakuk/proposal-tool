@@ -29,7 +29,7 @@ const NAV = [
 const NOTIFICATIONS: { key: OwnerNotificationType; label: string; hint: string }[] = [
   { key: "first_view", label: "First view", hint: "When a client first spends 5+ seconds on a proposal" },
   { key: "return_visit", label: "Return visits", hint: "When they come back after 12+ hours (max one per 12 h)" },
-  { key: "signed", label: "Signed", hint: "Includes the QuickBooks invoice checklist" },
+  { key: "signed", label: "Signed", hint: "Includes what to invoice" },
   { key: "declined", label: "Declined", hint: "Includes their reason, if given" },
   { key: "expiring_soon", label: "Expiring soon", hint: "3 days before an unsigned proposal expires" },
   { key: "expired", label: "Expired", hint: "When a proposal passes its expiry date" },
