@@ -1,12 +1,15 @@
 import type { PublicProposal, Selections } from "@bridger/shared";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { cadenceParts, money } from "../blocks/pricing/format";
 import { formatIsoDate } from "../render/format";
 import { ProposalBlocks, RenderProvider, useRenderContextValue } from "../render/ProposalRenderer";
 import { ThemeScope } from "../render/ThemeScope";
-import { NotAvailableError, fetchPublicProposal, requestExtension } from "./api";
+import { NotAvailableError, fetchCertificate, fetchPublicProposal, requestExtension, signedPdfUrl } from "./api";
+import { CertificateDetails } from "./Certificate";
+import { DeclineDialog } from "./DeclineDialog";
+import { SigningModal } from "./SigningModal";
 
 /**
  * Client-facing proposal (SPEC §8.1). `?print=1` renders the print/PDF view: no header,
@@ -16,7 +19,13 @@ export function PublicProposalPage() {
   const { slug = "" } = useParams();
   const [params] = useSearchParams();
   const print = params.get("print") === "1";
-  const { data, error, isLoading } = useQuery({ queryKey: ["public-proposal", slug], queryFn: () => fetchPublicProposal(slug), retry: (n, e) => !(e instanceof NotAvailableError) && n < 2 });
+  const { data, error, isLoading } = useQuery({
+    queryKey: ["public-proposal", slug],
+    queryFn: () => fetchPublicProposal(slug),
+    retry: (n, e) => !(e instanceof NotAvailableError) && n < 2,
+    // After signing, poll until the signed PDF is ready.
+    refetchInterval: (q) => (!print && q.state.data?.state === "signed" && !q.state.data.signed?.pdfReady ? 4000 : false),
+  });
 
   useEffect(() => {
     document.title = data ? `${data.title}${data.brand.company ? ` · ${data.brand.company.name}` : ""}` : "Proposal";
@@ -32,18 +41,37 @@ export function PublicProposalPage() {
 
 function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean }) {
   const doc = proposal.document!;
-  const [selections, setSelections] = useState<Selections | undefined>(undefined);
+  const qc = useQueryClient();
+  const [params] = useSearchParams();
+  const token = params.get("token");
+  const signed = proposal.signed;
+  const [selections, setSelections] = useState<Selections | undefined>(signed?.selections);
+  const [signing, setSigning] = useState(false);
+  const [declining, setDeclining] = useState(false);
   const onSelect = useCallback((sectionId: string, itemIds: string[]) => setSelections((s) => ({ ...s, [sectionId]: itemIds })), []);
-  const interactive = !print && proposal.state === "active";
+  const active = !print && proposal.state === "active";
+  const signingContext = useMemo(
+    () => ({ slug: proposal.slug, signed, onAccept: active ? () => setSigning(true) : undefined, onDecline: active ? () => setDeclining(true) : undefined }),
+    [proposal.slug, signed, active],
+  );
   const value = useRenderContextValue(doc.pricing, print ? "print" : "public", {
-    selections,
-    onSelect: interactive ? onSelect : undefined,
+    selections: signed?.selections ?? selections,
+    onSelect: active ? onSelect : undefined,
     ownerSignatureName: doc.ownerSignature?.name,
+    signing: signingContext,
   });
+
+  // Print view: the PDF renderer waits for [data-print-ready]; signed PDFs include the certificate.
+  const cert = useQuery({ queryKey: ["certificate", proposal.slug, token], queryFn: () => fetchCertificate(proposal.slug, token), enabled: print && Boolean(signed), retry: false });
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    void document.fonts.ready.then(() => setFontsReady(true));
+  }, []);
+  const printReady = print && fontsReady && (!signed || cert.isSuccess || cert.isError);
 
   return (
     <RenderProvider value={value} theme={proposal.brand.theme} overrides={doc.content.theme}>
-      <div className={`min-h-screen bg-(--color-background) ${print ? "proposal-print" : ""}`}>
+      <div className={`min-h-screen bg-(--color-background) ${print ? "proposal-print" : ""}`} data-print-ready={printReady ? "" : undefined}>
         {!print && (
           <header className="sticky top-0 z-10 border-b border-black/10 bg-(--color-background)/95 backdrop-blur print:hidden">
             <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3">
@@ -63,14 +91,21 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
                     ))}
                   </div>
                 )}
-                {proposal.state === "signed" ? (
-                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">Signed</span>
+                {signed ? (
+                  <>
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">Signed</span>
+                    {signed.pdfReady ? (
+                      <a href={signedPdfUrl(proposal.slug)} className="rounded-md border border-black/20 px-3 py-2 text-sm font-semibold hover:bg-black/5">
+                        Download PDF
+                      </a>
+                    ) : (
+                      <span className="text-sm opacity-60" role="status">
+                        Preparing PDF…
+                      </span>
+                    )}
+                  </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => document.querySelector("[data-block-type='signature']")?.scrollIntoView({ behavior: "smooth" })}
-                    className="rounded-md bg-(--color-accent) px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110"
-                  >
+                  <button type="button" onClick={() => setSigning(true)} className="rounded-md bg-(--color-accent) px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110">
                     Accept proposal
                   </button>
                 )}
@@ -80,12 +115,30 @@ function Viewer({ proposal, print }: { proposal: PublicProposal; print: boolean 
         )}
         <main className="mx-auto max-w-4xl px-4 py-10 sm:px-8 print:max-w-none print:p-0">
           <ProposalBlocks content={doc.content} />
-          {proposal.expiresAt && !print && proposal.state === "active" && (
-            <p className="mt-10 text-center text-sm opacity-60">This proposal is valid until {formatIsoDate(proposal.expiresAt.slice(0, 10))}.</p>
+          {proposal.expiresAt && active && <p className="mt-10 text-center text-sm opacity-60">This proposal is valid until {formatIsoDate(proposal.expiresAt.slice(0, 10))}.</p>}
+          {print && cert.data && (
+            <section style={{ breakBefore: "page" }} className="pt-4">
+              <h2 className="proposal-h2 !mt-0">Certificate of Completion</h2>
+              <CertificateDetails cert={cert.data} />
+            </section>
           )}
         </main>
         <Footer proposal={proposal} />
       </div>
+      {/* Stays mounted after signing so the thank-you step remains visible while the page updates. */}
+      {(active || signing) && (
+        <>
+          <SigningModal
+            proposal={proposal}
+            selections={value.selections}
+            totals={value.result}
+            open={signing}
+            onClose={() => setSigning(false)}
+            onSigned={() => void qc.invalidateQueries({ queryKey: ["public-proposal", proposal.slug] })}
+          />
+          <DeclineDialog slug={proposal.slug} open={declining} onClose={() => setDeclining(false)} onDeclined={() => void qc.invalidateQueries({ queryKey: ["public-proposal", proposal.slug] })} />
+        </>
+      )}
     </RenderProvider>
   );
 }

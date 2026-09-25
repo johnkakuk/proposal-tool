@@ -43,6 +43,15 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - **Viewer:** `src/public/*`, code-split. It must not import admin pages, TipTap, or the Supabase SDK. `?print=1` is the print/PDF view (no header, no interaction, no tracking).
 - **Link previews:** `apps/web/functions/p/[slug].ts` (Pages Function) injects OG tags via the `API` service binding (`apps/web/wrangler.toml`). Tag building is in `src/lib/ogMeta.ts` (escaped, tested). `public/_headers` is the noindex fallback.
 
+## E-signature (SPEC §8.2)
+- **Flow:** details + review → email OTP (if `require_signer_email_otp`) → typed/drawn signature + the exact consent text (`consentText()` in shared) → `POST /api/public/proposals/:slug/sign`.
+- **`services/signing.ts`:** validates input *before* checking verification. It recomputes totals from the client's selections on the **published** pricing, then builds the `SignatureSnapshot`. The snapshot is RFC 8785 canonical, hashed with SHA-256, and committed via the `sign_proposal` RPC (one transaction: version check → 409 `stale_version`, OTP consumed, `signed` version row, signature row, lock, audit).
+- **Snapshot privacy:** raw IP / user agent / geo are *not* in the snapshot, only `evidenceHash`. That lets the public verification page (`/p/:slug/certificate`) serve the full snapshot for in-browser re-hashing with the email masked. Full evidence and the audit trail appear only with a 5-minute render token (the PDF's certificate page). Certificate times are UTC.
+- **OTP:** CSPRNG 6-digit, salted hash only, 10 min, 5 attempts, 3 sends/15 min.
+- **PDF:** `services/pdf.ts` uses Cloudflare Browser Rendering (`BROWSER` binding; works locally in `wrangler dev`) to load `/p/:slug?print=1&token=…` and waits for `[data-print-ready]`. `pdf_path`/`pdf_hash` are write-once. The first attempt runs in `waitUntil`; the hourly cron retries (max 3, counted in KV), then signed-copy emails go out.
+- **Email:** `lib/email.ts` supports `EMAIL_TRANSPORT` = resend (prod) | mailpit (local, http://127.0.0.1:54324, read codes there) | memory (integration tests). Every send is logged to `email_log`.
+- **Decline:** status → declined with a private reason (never in public payloads).
+
 ## Documents
 - `ProposalContent = { schemaVersion: 1, theme?, blocks: Block[] }`. Block IDs are stable (nanoid 10 for new blocks) because analytics and heatmaps attach to them.
 - **To add a block/object type** (a developer task, not a user one):

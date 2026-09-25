@@ -41,6 +41,7 @@ const router = createBrowserRouter([
     ],
   },
   { path: "/p/:slug", lazy: page(() => import("./public/PublicProposalPage"), "PublicProposalPage") },
+  { path: "/p/:slug/certificate", lazy: page(() => import("./public/CertificatePage"), "CertificatePage") },
   { path: "*", element: <NotFound /> },
 ]);
 

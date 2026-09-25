@@ -14,7 +14,7 @@ Everything runs on free tiers: Cloudflare Pages + Workers, Supabase, and Resend.
 | 1 | Foundation: monorepo, schemas, pricing engine, database, Worker, login | ✅ Done |
 | 2 | Editor, templates, clients | ✅ Done |
 | 3 | Publish & public viewer | ✅ Done |
-| 4 | E-signature | — |
+| 4 | E-signature | ✅ Done |
 | 5 | Email | — |
 | 6 | Tracking & analytics | — |
 | 7 | AI (MCP + REST) | — |
@@ -40,7 +40,7 @@ pnpm db:reset                     # applies migrations and seeds
 pnpm dev                          # Worker on :8787, app on http://localhost:5173/app
 ```
 
-Local login: `owner@bridger.local` / `bridger-dev-password`. Magic-link emails land in Mailpit at http://127.0.0.1:54324.
+Local login: `owner@bridger.local` / `bridger-dev-password`. All local email (magic links, signing codes, signed copies) lands in Mailpit at http://127.0.0.1:54324.
 
 ## Writing proposals
 

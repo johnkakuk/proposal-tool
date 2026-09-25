@@ -1,4 +1,4 @@
-import { emptyPricing, type Pricing, type PricingResult, type Selections } from "@bridger/shared";
+import { emptyPricing, type Pricing, type PricingResult, type PublicSignature, type Selections } from "@bridger/shared";
 import { createContext, useContext } from "react";
 
 /**
@@ -19,6 +19,8 @@ export interface RenderContextValue {
   /** Present only when the client can change selections (public viewer). */
   onSelect?: (sectionId: string, itemIds: string[]) => void;
   ownerSignatureName?: string;
+  /** Public viewer only: signing actions, or the completed signature once signed. */
+  signing?: { slug: string; signed: PublicSignature | null; onAccept?: () => void; onDecline?: () => void };
 }
 
 export const RenderContext = createContext<RenderContextValue>({ mode: "editor", pricing: emptyPricing(), result: null, selections: {} });

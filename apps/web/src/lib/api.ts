@@ -32,3 +32,20 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   }
   return payload as T;
 }
+
+/** POSTs to the Worker and downloads the binary response (e.g. a PDF) as a file. */
+export async function downloadFromApi(path: string, fallbackName: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const res = await fetch(`/api/v1${path}`, { method: "POST", headers: data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {} });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    throw new ApiRequestError(res.status, body?.error.code ?? "error", body?.error.message ?? `Download failed (${res.status})`);
+  }
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const encoded = /filename\*=UTF-8''([^;]+)/.exec(disposition)?.[1];
+  const name = encoded ? decodeURIComponent(encoded) : fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}

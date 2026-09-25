@@ -7,8 +7,8 @@ export const FALLBACK_THEME: Theme = {
   bodyFont: "Inter",
 };
 
-/** Loads the theme's Google Fonts once per family pair. */
-function useGoogleFonts(families: string[]) {
+/** Loads Google Fonts once per family set. */
+export function useGoogleFonts(families: string[]) {
   const key = families.join("|");
   useEffect(() => {
     const id = `gf-${key.replace(/\W+/g, "-")}`;

@@ -29,9 +29,12 @@ test("a published link works in a private window, with live pricing", async ({ p
   await pub.getByRole("checkbox", { name: "Add Posting management" }).check();
   await expect(total).toContainText("$1,250.00/mo");
 
-  // Accept scrolls to the signature block.
-  await pub.getByRole("button", { name: "Accept proposal" }).first().click();
+  // The call-to-action button scrolls to the signature; the header's Accept opens signing.
+  await pub.locator("[data-block-type='cta']").getByRole("button", { name: "Accept proposal" }).click();
   await expect(pub.locator("[data-block-type='signature']")).toBeInViewport();
+  await pub.getByRole("banner").getByRole("button", { name: "Accept proposal" }).click();
+  await expect(pub.getByRole("dialog", { name: "Review & accept" })).toBeVisible();
+  await pub.keyboard.press("Escape");
 
   // The editor's forms never leak into the client view.
   await expect(pub.locator("[data-object-editor], [data-object-toolbar]")).toHaveCount(0);

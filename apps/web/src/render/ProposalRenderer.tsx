@@ -5,7 +5,11 @@ import { RenderContext, type RenderContextValue, type RenderMode } from "./Rende
 import { ThemeScope } from "./ThemeScope";
 
 /** Builds the render context for a proposal: resolved selections and computed totals. */
-export function useRenderContextValue(pricing: Pricing, mode: RenderMode, opts: { selections?: Selections; onSelect?: RenderContextValue["onSelect"]; ownerSignatureName?: string } = {}): RenderContextValue {
+export function useRenderContextValue(
+  pricing: Pricing,
+  mode: RenderMode,
+  opts: { selections?: Selections; onSelect?: RenderContextValue["onSelect"]; ownerSignatureName?: string; signing?: RenderContextValue["signing"] } = {},
+): RenderContextValue {
   return useMemo(() => {
     const resolved = resolveSelections(pricing, opts.selections);
     const priced = tryComputePricing(pricing, resolved.issues.length ? undefined : resolved.selections);
@@ -16,8 +20,9 @@ export function useRenderContextValue(pricing: Pricing, mode: RenderMode, opts: 
       selections: priced.ok ? priced.result.selections : resolved.selections,
       onSelect: opts.onSelect,
       ownerSignatureName: opts.ownerSignatureName,
+      signing: opts.signing,
     };
-  }, [pricing, mode, opts.selections, opts.onSelect, opts.ownerSignatureName]);
+  }, [pricing, mode, opts.selections, opts.onSelect, opts.ownerSignatureName, opts.signing]);
 }
 
 export function RenderProvider({ value, theme, overrides, children }: { value: RenderContextValue; theme?: Theme | null; overrides?: ProposalContent["theme"]; children: ReactNode }) {

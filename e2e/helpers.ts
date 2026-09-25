@@ -72,3 +72,23 @@ export async function publishFromEditor(page: Page, label: "Publish" | "Update" 
   await dialog.getByRole("button", { name: "Close" }).click();
   return url;
 }
+
+const MAILPIT = "http://127.0.0.1:54324";
+
+/** Reads the newest signing code sent to `email` from local Mailpit (like a real inbox). */
+export async function latestOtp(email: string): Promise<string> {
+  for (let i = 0; i < 40; i++) {
+    const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}&limit=5`);
+    const list = (await res.json()) as { messages: { ID: string; Subject: string }[] };
+    const msg = list.messages.find((m) => /is your code to sign/.test(m.Subject));
+    if (msg) return /^(\d{6})/.exec(msg.Subject)![1]!;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`No code emailed to ${email}`);
+}
+
+/** All subjects Mailpit received for an address. */
+export async function mailSubjects(email: string): Promise<string[]> {
+  const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}&limit=20`);
+  return ((await res.json()) as { messages: { Subject: string }[] }).messages.map((m) => m.Subject);
+}

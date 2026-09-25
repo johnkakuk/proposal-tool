@@ -1,10 +1,10 @@
 import type { ClientRow, Pricing, ProposalContent, ProposalDetail } from "@bridger/shared";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ClientPicker } from "../components/ClientPicker";
 import { Button, ErrorNote, Modal, Spinner, StatusChip, inputClass } from "../components/ui";
-import { api, ApiRequestError } from "../lib/api";
+import { api, ApiRequestError, downloadFromApi } from "../lib/api";
 import { useClients, useProposal, useProposalAction, useWorkspaceSettings } from "../lib/queries";
 import { DocumentWorkspace, SidebarCard } from "../workspace/DocumentWorkspace";
 import { useAutosave } from "../workspace/useAutosave";
@@ -29,6 +29,17 @@ export function ProposalEditorPage() {
 
 const LATER = "Coming in a later phase";
 
+interface SignatureSummary {
+  certificateId: string;
+  signerName: string;
+  signerEmail: string;
+  signerTitle: string | null;
+  signerCompany: string | null;
+  signedAt: string;
+  pdfUrl: string | null;
+  certificateUrl: string;
+}
+
 interface PublishResponse {
   proposal: ProposalDetail;
   published: boolean;
@@ -47,6 +58,23 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
   const [publishIssues, setPublishIssues] = useState<string[] | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const signature = useQuery({
+    queryKey: ["signature", proposal.id],
+    queryFn: () => api<SignatureSummary>(`/proposals/${proposal.id}/signature`),
+    enabled: Boolean(proposal.signed_at),
+    refetchInterval: (q) => (q.state.data && !q.state.data.pdfUrl ? 5000 : false),
+  });
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      await downloadFromApi(`/proposals/${proposal.id}/pdf`, `${title}.pdf`);
+    } catch (e) {
+      setPublishIssues([e instanceof Error ? e.message : "Export failed"]);
+    } finally {
+      setExporting(false);
+    }
+  };
   const publicUrl = `${window.location.origin}/p/${proposal.slug}`;
   const base = useRef(proposal.updated_at);
   const qc = useQueryClient();
@@ -156,11 +184,12 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
                 <MenuItem disabled={!isLive} onClick={() => window.open(publicUrl, "_blank", "noopener")}>
                   Open client view
                 </MenuItem>
-                {["Send email", "Export PDF"].map((label) => (
-                  <button key={label} role="menuitem" type="button" disabled title={LATER} className="block w-full rounded px-3 py-1.5 text-left text-slate-400">
-                    {label}
-                  </button>
-                ))}
+                <MenuItem disabled={!isLive || exporting} onClick={() => (setMoreOpen(false), void exportPdf())}>
+                  {exporting ? "Exporting PDF…" : "Export PDF"}
+                </MenuItem>
+                <button role="menuitem" type="button" disabled title={LATER} className="block w-full rounded px-3 py-1.5 text-left text-slate-400">
+                  Send email
+                </button>
                 <hr className="my-1 border-slate-100" />
                 <MenuItem onClick={() => (setMoreOpen(false), setTemplateOpen(true))}>Save as template…</MenuItem>
                 <MenuItem onClick={() => duplicate(false)}>Duplicate</MenuItem>
@@ -181,7 +210,36 @@ function ProposalEditorLoaded({ proposal, brand, ownerSignatureName }: { proposa
         banner={
           locked ? (
             <div className="flex flex-wrap items-center gap-3 border-t border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-              {proposal.signed_at ? "This proposal is signed and locked. Signed proposals can't be changed." : "This proposal is archived and read-only."}
+              {proposal.signed_at ? (
+                <span>
+                  Signed
+                  {signature.data && (
+                    <>
+                      {" "}
+                      by <strong>{signature.data.signerName}</strong>
+                      {signature.data.signerCompany ? ` (${signature.data.signerCompany})` : ""} on{" "}
+                      {new Date(signature.data.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                    </>
+                  )}
+                  . Signed proposals are locked.
+                </span>
+              ) : (
+                "This proposal is archived and read-only."
+              )}
+              {signature.data && (
+                <span className="flex gap-3">
+                  {signature.data.pdfUrl ? (
+                    <a href={signature.data.pdfUrl} className="font-semibold underline" target="_blank" rel="noopener">
+                      Signed PDF
+                    </a>
+                  ) : (
+                    <span className="opacity-70">Preparing PDF…</span>
+                  )}
+                  <a href={signature.data.certificateUrl} className="font-semibold underline" target="_blank" rel="noopener">
+                    Certificate {signature.data.certificateId}
+                  </a>
+                </span>
+              )}
               {proposal.signed_at && (
                 <Button variant="primary" onClick={() => duplicate(true)} disabled={action.isPending}>
                   Duplicate as new revision

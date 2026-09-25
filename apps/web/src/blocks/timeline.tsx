@@ -5,7 +5,7 @@ export const timeline: BlockUI<"timeline"> = {
   type: "timeline",
   menu: { description: "Project phases and durations", icon: "🗓️", keywords: ["schedule", "phases", "roadmap", "process"], group: "Sales" },
   Renderer: ({ props }) => (
-    <ol className="relative space-y-6 border-l-2 border-(--color-accent)/40 pl-6">
+    <ol className="relative ml-2 space-y-6 border-l-2 border-(--color-accent)/40 pl-6">
       {props.phases.map((p, i) => (
         <li key={i} className="relative">
           <span className="absolute -left-[33px] flex size-4 items-center justify-center rounded-full bg-(--color-accent) ring-4 ring-(--color-background)" />
