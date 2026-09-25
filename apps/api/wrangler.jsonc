@@ -19,11 +19,11 @@
     "EMAIL_TRANSPORT": "resend"
   },
 
-  // Replace the ids with the output of `wrangler kv namespace create OAUTH_KV` / `RATE_KV`.
+  // Production ids (from `wrangler kv namespace create OAUTH_KV` / `RATE_KV`).
   // Local dev (`wrangler dev`) simulates KV and ignores these ids.
   "kv_namespaces": [
-    { "binding": "OAUTH_KV", "id": "REPLACE_WITH_OAUTH_KV_ID" },
-    { "binding": "RATE_KV", "id": "REPLACE_WITH_RATE_KV_ID" }
+    { "binding": "OAUTH_KV", "id": "272409bdd7794aafb37385082be6d644" },
+    { "binding": "RATE_KV", "id": "cf5f52cdce1543b2877bb6e471000c2e" }
   ],
 
   // Browser Rendering for PDFs (SPEC §12). Free plan: 10 min/day, 3 concurrent browsers,
