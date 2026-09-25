@@ -26,7 +26,7 @@ test("publish → open → choose options → verify email → sign → locked, 
   await pub.goto(url);
   await pub.getByRole("radio", { name: /Half Chest/ }).click();
   await pub.getByRole("checkbox", { name: "Add Drone footage" }).check();
-  await expect(pub.getByLabel("Current total")).toContainText("$5,250.00");
+  await expect(pub.getByRole("group", { name: "Proposal total" }).first()).toContainText("$5,250.00");
 
   // Step 1: details + review of what they're accepting
   await pub.getByRole("banner").getByRole("button", { name: "Accept proposal" }).click();
@@ -64,7 +64,7 @@ test("publish → open → choose options → verify email → sign → locked, 
   const sigBlock = pub.locator("[data-block-type='signature']");
   await expect(sigBlock).toContainText("Riley Chen");
   await expect(sigBlock).toContainText(/Certificate BDP-/);
-  await expect(pub.getByLabel("Current total")).toContainText("$5,250.00");
+  await expect(pub.getByRole("group", { name: "Proposal total" }).first()).toContainText("$5,250.00");
   await expect(pub.getByRole("button", { name: "Accept & sign" })).toHaveCount(0);
 
   // The signed PDF gets rendered (Browser Rendering, locally) and stored with its hash

@@ -116,7 +116,7 @@ function Section({ section, computed, selected, onSelect }: { section: PricingSe
 function Totals({ result, notes }: { result: PricingResult; notes?: string }) {
   const hasAdjustments = result.discounts.some((d) => d.amountCents > 0) || result.tax !== null;
   return (
-    <div className="rounded-xl bg-(--color-primary)/5 p-5">
+    <div role="group" aria-label="Proposal total" aria-live="polite" className="rounded-xl bg-(--color-primary)/5 p-5">
       {hasAdjustments && (
         <dl className="mb-3 space-y-1 border-b border-black/10 pb-3 text-sm">
           <Row label="Subtotal" amounts={result.subtotal} />

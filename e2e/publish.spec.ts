@@ -18,7 +18,7 @@ test("a published link works in a private window, with live pricing", async ({ p
   await pub.goto(url);
   await expect(pub.locator("[data-block-type='cover']")).toContainText("Content War Chest");
   await expect(pub).toHaveTitle(new RegExp(title));
-  const total = pub.getByLabel("Current total");
+  const total = pub.getByRole("group", { name: "Proposal total" }).first();
   await expect(total).toContainText("$8,000.00");
 
   // Client picks the smaller package and an add-on; totals follow.
@@ -113,7 +113,7 @@ test("print view has no header or interactive controls", async ({ page, browser 
   const pub = await client.newPage();
   await pub.goto(`${url}?print=1`);
   await expect(pub.locator("[data-block-type='cover']")).toBeVisible();
-  await expect(pub.getByLabel("Current total")).toHaveCount(0);
+  await expect(pub.getByRole("banner")).toHaveCount(0);
   await expect(pub.getByRole("button", { name: "Accept proposal" })).toHaveCount(0);
   await expect(pub.getByRole("radio", { name: /Half Chest/ })).toBeDisabled();
   await client.close();
