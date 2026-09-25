@@ -59,7 +59,11 @@ pnpm exec wrangler kv namespace create OAUTH_KV
 pnpm exec wrangler kv namespace create RATE_KV
 ```
 
-Paste the two ids into `apps/api/wrangler.jsonc`, replacing `REPLACE_WITH_OAUTH_KV_ID` and `REPLACE_WITH_RATE_KV_ID`. Then set the secrets:
+Paste the two ids into `apps/api/wrangler.jsonc` (production ids are already filled in for Bridger's account).
+
+A new Cloudflare account needs a `workers.dev` subdomain before cron triggers can be saved, even though this Worker doesn't use one. Open **Workers & Pages** in the dashboard once to create it.
+
+Set the secrets with `scripts/set-worker-secrets.sh <supabase-project-ref>`. It pulls the service key from the Supabase CLI, generates the random values, and pipes everything to `wrangler secret bulk` without writing to disk. Add the Resend key later with `--resend`. To set them by hand instead:
 
 ```sh
 pnpm exec wrangler secret put SUPABASE_URL               # https://<ref>.supabase.co
