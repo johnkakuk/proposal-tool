@@ -1,5 +1,5 @@
 {
-  // Bridger Proposals Worker: REST API, MCP server, OAuth, tracking ingest, cron (SPEC §2).
+  // Bridger Digital Proposals Worker: REST API, MCP server, OAuth, tracking ingest, cron (SPEC §2).
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "bridger-proposals-api",
   "main": "src/index.ts",

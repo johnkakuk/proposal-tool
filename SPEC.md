@@ -1,4 +1,4 @@
-# Bridger Proposals — Product & Technical Spec
+# Bridger Digital Proposals — Product & Technical Spec
 
 **Owner:** John (Bridger Digital)
 **URL:** `proposals.bridgerdigital.com`

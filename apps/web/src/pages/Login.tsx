@@ -41,7 +41,7 @@ export function Login() {
   return (
     <main className="flex min-h-full items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-1 text-2xl font-semibold text-brand">Bridger Proposals</h1>
+        <h1 className="mb-1 text-2xl font-semibold text-brand">Bridger Digital Proposals</h1>
         <p className="mb-6 text-sm text-slate-500">Sign in to manage proposals.</p>
 
         {!supabaseConfigured && (

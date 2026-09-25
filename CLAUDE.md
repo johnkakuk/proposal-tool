@@ -1,4 +1,4 @@
-# Bridger Proposals: conventions
+# Bridger Digital Proposals: conventions
 
 Self-hosted proposal builder (Prospero replacement) for Bridger Digital. The full spec is in [SPEC.md](SPEC.md). Build in the §14 phases and stop after each one to summarize.
 

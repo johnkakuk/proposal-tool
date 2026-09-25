@@ -14,7 +14,7 @@ export function AppShell() {
     <div className="min-h-full">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
-          <span className="font-semibold text-brand">Bridger Proposals</span>
+          <span className="font-semibold text-brand">Bridger Digital Proposals</span>
           <nav aria-label="Main" className="flex gap-1">
             {NAV.map((n) => (
               <NavLink

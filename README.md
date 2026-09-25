@@ -1,4 +1,4 @@
-# Bridger Proposals
+# Bridger Digital Proposals
 
 Self-hosted proposal software for Bridger Digital, replacing Prospero. It builds, publishes, tracks, and e-signs client proposals. Claude and ChatGPT can also write and publish proposals directly through an MCP server.
 
