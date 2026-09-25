@@ -20,17 +20,23 @@ The app lives on one hostname, `proposals.bridgerdigital.com`:
    pnpm exec supabase link --project-ref <project-ref>
    pnpm deploy:db          # supabase db push: applies supabase/migrations
    ```
-3. **Authentication → Sign In / Providers:** turn **off** "Allow new users to sign up". Leave Email enabled.
-4. **Authentication → URL Configuration:**
-   - Site URL: `https://proposals.bridgerdigital.com/app`
-   - Redirect URLs: `https://proposals.bridgerdigital.com/app/**`
-5. **Authentication → Users → Add user → Create new user:** your email and a strong password, with **Auto Confirm** checked. The owner-bootstrap trigger creates your settings row.
-6. **SQL Editor:** paste and run `supabase/seed/02_starter_templates.sql` once to load the starter templates. It's safe to re-run. Don't run `01_dev_owner.sql` in production.
-7. **Project Settings → API Keys**, note:
+3. Turn off signups and set the login URLs. Either use the dashboard (**Authentication → Sign In / Providers**: turn off "Allow new users to sign up"; **URL Configuration**: Site URL `https://proposals.bridgerdigital.com/app`, Redirect URL `https://proposals.bridgerdigital.com/app/**`), or push just those three settings from a minimal `config.toml` in a scratch folder:
+   ```toml
+   # <scratch>/supabase/config.toml
+   project_id = "bridger-proposals"
+   [auth]
+   site_url = "https://proposals.bridgerdigital.com/app"
+   additional_redirect_urls = ["https://proposals.bridgerdigital.com/app", "https://proposals.bridgerdigital.com/app/**"]
+   enable_signup = false
+   ```
+   Run `supabase config diff --workdir <scratch> --project-ref <ref>` first, then `config push`. Don't push the repo's own `config.toml`, because its URLs are for local dev.
+4. **Authentication → Users → Add user → Create new user** (or `POST /auth/v1/admin/users` with the service key): your email and a strong password, with **Auto Confirm** checked. The owner-bootstrap trigger creates your settings row.
+5. Load the starter templates with `pnpm exec supabase db query --linked -f supabase/seed/02_starter_templates.sql` (or paste the file into the SQL Editor). It's safe to re-run. Don't run `01_dev_owner.sql` in production.
+6. **Project Settings → API Keys**, note:
    - Project URL
    - the publishable (anon) key, for the web build
    - the secret (service_role) key, for the Worker
-   - **JWT Keys → Legacy JWT secret**. The Worker verifies sessions with the project's JWKS and falls back to this secret.
+   - For `SUPABASE_JWT_SECRET`: new projects sign sessions with ES256, which the Worker verifies through the project's JWKS. The secret is only used for HS256 tokens from legacy projects. On a new project, set it to a random string (`openssl rand -base64 48`), which means HS256 tokens are never accepted.
 
 The Free plan pauses projects after a week without activity. The Worker's hourly cron queries the database, so the project stays awake.
 
