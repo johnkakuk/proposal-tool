@@ -290,3 +290,82 @@ describe("publish_proposal", () => {
     );
   });
 });
+
+describe("sign_proposal", () => {
+  const sigPayload = (extra: Record<string, unknown> = {}) => ({
+    signer_name: "Jane Client",
+    signer_email: "jane@example.com",
+    signer_title: "Owner",
+    signer_company: "Acme",
+    signature_type: "typed",
+    signature_text: "Jane Client",
+    selections: {},
+    computed_totals: {},
+    consent_text: "I agree",
+    signed_at: new Date().toISOString(),
+    ip: "203.0.113.9",
+    user_agent: "test",
+    geo: { country: "US" },
+    timezone_offset_minutes: 420,
+    snapshot: { hello: "world" },
+    document_hash: HASH2,
+    certificate_id: `BDP-${"23456789ABCDEFGH"[Math.floor(Math.random() * 16)]}K3Q-92X${"ABCDEFGH"[Math.floor(Math.random() * 8)]}`,
+    ...extra,
+  });
+
+  async function published(): Promise<string> {
+    const id = await insertProposal(owner, "draft", { pricing: { currency: "USD", sections: [], discounts: [] } });
+    const upd = (await db.query<{ u: string }>(`select updated_at::text as u from public.proposals where id = $1`, [id])).rows[0]!.u;
+    await db.query(`select public.publish_proposal($1, $2, $3::timestamptz, $4, null, now() + interval '7 days', 'owner', null, null)`, [id, owner, upd, HASH]);
+    return id;
+  }
+  const sign = (id: string, version: number, otp: string | null = null, extra = {}) =>
+    db.query<{ id: string }>(`select public.sign_proposal($1, $2, $3, $4::jsonb) as id`, [id, version, otp, JSON.stringify(sigPayload(extra))]);
+
+  it("locks the proposal, adds a signed version copied from the published one, and audits", async () => {
+    const id = await published();
+    const { rows } = await sign(id, 1);
+    expect(rows[0]!.id).toMatch(/^[0-9a-f-]{36}$/);
+    const p = (await db.query<{ status: string; current_version: number; signed_at: string | null }>(`select status, current_version, signed_at from public.proposals where id = $1`, [id])).rows[0]!;
+    expect(p).toMatchObject({ status: "signed", current_version: 2 });
+    expect(p.signed_at).not.toBeNull();
+    const versions = (await db.query<{ version: number; reason: string; content_hash: string }>(`select version, reason, content_hash from public.proposal_versions where proposal_id = $1 order by version`, [id])).rows;
+    expect(versions).toEqual([
+      { version: 1, reason: "published", content_hash: HASH },
+      { version: 2, reason: "signed", content_hash: HASH },
+    ]);
+    const s = (await db.query<{ version: number; document_hash: string; email_verified: boolean }>(`select version, document_hash, email_verified from public.signatures where proposal_id = $1`, [id])).rows[0]!;
+    expect(s).toEqual({ version: 2, document_hash: HASH2, email_verified: false });
+    // Now immutable
+    await rejects(db.query(`update public.proposals set title = 'x' where id = $1`, [id]), /signed and locked/);
+    await rejects(sign(id, 2), /can no longer be signed/);
+  });
+
+  it("rejects a client looking at an old version (409 in the API)", async () => {
+    const id = await published();
+    await db.query(`update public.proposals set title = 'v2' where id = $1`, [id]);
+    const upd = (await db.query<{ u: string }>(`select updated_at::text as u from public.proposals where id = $1`, [id])).rows[0]!.u;
+    await db.query(`select public.publish_proposal($1, $2, $3::timestamptz, $4, null, now() + interval '7 days', 'owner', null, null)`, [id, owner, upd, HASH]);
+    await expect(sign(id, 1)).rejects.toMatchObject({ code: "40001" });
+    await sign(id, 2);
+  });
+
+  it("rejects expired proposals and drafts", async () => {
+    const id = await published();
+    await db.query(`update public.proposals set expires_at = now() - interval '1 minute' where id = $1`, [id]);
+    await rejects(sign(id, 1), /expired/);
+    const draft = await insertProposal(owner);
+    await rejects(sign(draft, 0), /can no longer be signed/);
+  });
+
+  it("consumes a verified OTP exactly once", async () => {
+    const id = await published();
+    const otp = (await db.query<{ id: string }>(`insert into public.otp_codes (proposal_id, email, code_hash, verified_at) values ($1, 'jane@example.com', 'x', now()) returning id`, [id])).rows[0]!.id;
+    const unverified = (await db.query<{ id: string }>(`insert into public.otp_codes (proposal_id, email, code_hash) values ($1, 'jane@example.com', 'x') returning id`, [id])).rows[0]!.id;
+    await rejects(sign(id, 1, unverified), /verification expired/);
+    await sign(id, 1, otp);
+    const used = (await db.query<{ used_at: string | null }>(`select used_at from public.otp_codes where id = $1`, [otp])).rows[0]!;
+    expect(used.used_at).not.toBeNull();
+    expect((await db.query<{ email_verified: boolean }>(`select email_verified from public.signatures where proposal_id = $1`, [id])).rows[0]!.email_verified).toBe(true);
+  });
+});

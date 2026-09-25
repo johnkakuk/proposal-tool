@@ -18,7 +18,9 @@
 
   "vars": {
     "APP_URL": "https://proposals.bridgerdigital.com",
-    "OWNER_EMAIL": "john@bridgerdigital.com"
+    "OWNER_EMAIL": "john@bridgerdigital.com",
+    "EMAIL_FROM": "Bridger Digital <proposals@bridgerdigital.com>",
+    "EMAIL_TRANSPORT": "resend"
   },
 
   // Replace the ids with the output of `wrangler kv namespace create OAUTH_KV` / `RATE_KV`.
@@ -28,7 +30,9 @@
     { "binding": "RATE_KV", "id": "REPLACE_WITH_RATE_KV_ID" }
   ],
 
-  // Browser Rendering binding for PDFs is added in Phase 4, after confirming free-tier limits (SPEC §2, §12).
+  // Browser Rendering for PDFs (SPEC §12). Free plan: 10 min/day, 3 concurrent browsers,
+  // 1 new browser / 20 s. Failures are retried by the hourly cron.
+  "browser": { "binding": "BROWSER" },
 
   "triggers": {
     // Cron runs in UTC. 10:00 UTC ≈ 03:00 Pacific. The digest job runs inside the hourly

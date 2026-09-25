@@ -20,6 +20,8 @@ import type { ServiceContext } from "../../services/context.js";
 import * as proposals from "../../services/proposals.js";
 import { publishProposal } from "../../services/publish.js";
 import { audit } from "../../services/audit.js";
+import { exportProposalPdf } from "../../services/pdf.js";
+import { loadSignature } from "../../services/public.js";
 import * as templates from "../../services/templates.js";
 
 /**
@@ -57,6 +59,31 @@ export const v1 = new Hono<AppEnv>()
     await proposals.getProposal(ctx(c), proposalId); // ownership check
     await audit(ctx(c), proposalId, type);
     return c.body(null, 204);
+  })
+  .get("/proposals/:id/signature", async (c) => {
+    const p = await proposals.getProposal(ctx(c), id(c));
+    const sig = p.signed_at ? await loadSignature(serviceClient(c.env), p.id) : null;
+    if (!sig) return c.json({ error: { code: "not_signed", message: "This proposal hasn't been signed." } }, 404);
+    const pdfUrl = sig.pdf_path ? (await serviceClient(c.env).storage.from("signed-pdfs").createSignedUrl(sig.pdf_path, 300)).data?.signedUrl ?? null : null;
+    return c.json({
+      certificateId: sig.certificate_id,
+      signerName: sig.signer_name,
+      signerEmail: sig.signer_email,
+      signerTitle: sig.signer_title,
+      signerCompany: sig.signer_company,
+      signedAt: sig.consent_given_at,
+      documentHash: sig.document_hash,
+      pdfUrl,
+      certificateUrl: `${c.env.APP_URL.replace(/\/$/, "")}/p/${p.slug}/certificate`,
+    });
+  })
+  .post("/proposals/:id/pdf", async (c) => {
+    const p = await proposals.getProposal(ctx(c), id(c));
+    const { bytes, filename } = await exportProposalPdf(c.env, serviceClient(c.env), p);
+    await audit(ctx(c), p.id, "pdf_exported", { version: p.current_version });
+    return new Response(bytes, {
+      headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"; filename*=UTF-8''${encodeURIComponent(filename)}` },
+    });
   })
   .post("/proposals/:id/archive", async (c) => c.json(await proposals.archiveProposal(ctx(c), id(c))))
   .post("/proposals/:id/save-as-template", async (c) =>

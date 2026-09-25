@@ -7,3 +7,8 @@ RESEND_API_KEY=
 TRACKING_SALT=change-me-to-a-long-random-string
 APP_URL=http://localhost:5173
 OWNER_EMAIL=owner@bridger.local
+SIGNING_SECRET=generate-a-long-random-string
+# Local email goes to Supabase's Mailpit (http://127.0.0.1:54324); production uses Resend.
+EMAIL_FROM=Bridger Digital <proposals@bridger.local>
+EMAIL_TRANSPORT=mailpit
+MAILPIT_URL=http://127.0.0.1:54324

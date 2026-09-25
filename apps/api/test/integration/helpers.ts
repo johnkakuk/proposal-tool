@@ -16,6 +16,9 @@ export function env(): Env {
     APP_URL: "http://localhost:5173",
     OWNER_EMAIL: "owner@bridger.local",
     RATE_KV: memoryKv(),
+    SIGNING_SECRET: "integration-signing-secret",
+    EMAIL_FROM: "Bridger Digital <proposals@bridger.test>",
+    EMAIL_TRANSPORT: "memory",
   } as unknown as Env;
 }
 
@@ -54,7 +57,12 @@ export async function publicApi<T = unknown>(method: string, path: string, json?
     `/api/public${path}`,
     { method, headers: json === undefined ? {} : { "Content-Type": "application/json" }, body: json === undefined ? undefined : JSON.stringify(json) },
     e,
+    executionCtx,
   );
   const text = await res.text();
   return { status: res.status, body: (text ? JSON.parse(text) : null) as T, headers: res.headers };
 }
+
+/** Collects waitUntil() work so tests can await or ignore it (no PDF rendering in unit/integration tests). */
+export const background: Promise<unknown>[] = [];
+export const executionCtx = { waitUntil: (p: Promise<unknown>) => void background.push(p.catch(() => {})), passThroughOnException() {}, props: {} } as unknown as ExecutionContext;

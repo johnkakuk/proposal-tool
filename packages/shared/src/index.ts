@@ -14,3 +14,4 @@ export * from "./json-schema.js";
 export * from "./schemas/api.js";
 export * from "./types.js";
 export * from "./template-vars.js";
+export * from "./signing.js";

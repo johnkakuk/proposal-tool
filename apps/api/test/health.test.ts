@@ -9,6 +9,7 @@ const env = (overrides: Partial<Env> = {}) =>
     SUPABASE_JWT_SECRET: "jwt",
     RESEND_API_KEY: "re_test",
     TRACKING_SALT: "salt",
+    SIGNING_SECRET: "signing-secret",
     APP_URL: "http://localhost:5173",
     OWNER_EMAIL: "owner@bridger.local",
     ...overrides,

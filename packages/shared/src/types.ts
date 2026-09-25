@@ -1,7 +1,7 @@
 import type { PricingResult } from "./pricing.js";
 import type { ProposalContent } from "./schemas/content.js";
 import type { CreatedVia, ProposalStatus } from "./schemas/db.js";
-import type { Pricing } from "./schemas/pricing.js";
+import type { Pricing, Selections } from "./schemas/pricing.js";
 import type { OwnerSignature } from "./schemas/settings.js";
 import type { CompanyInfo, Theme } from "./schemas/theme.js";
 
@@ -89,6 +89,44 @@ export interface PublicProposal {
   brand: { theme: Theme | null; company: CompanyInfo | null; contactEmail: string };
   /** Present for active and signed proposals only. */
   document: { content: ProposalContent; pricing: Pricing; ownerSignature: OwnerSignature | null } | null;
+  /** Whether the signing flow asks for an email code (Settings). */
+  requireOtp: boolean;
+  /** Pre-fill for the signing form (from the client record). */
+  signerDefaults: { email: string | null; company: string | null };
+  /** For signed proposals: the client's choices and signature. */
+  signed: PublicSignature | null;
+}
+
+export interface PublicSignature {
+  signerName: string;
+  signerTitle: string | null;
+  signerCompany: string | null;
+  signedAt: string;
+  selections: Selections;
+  signature: { type: "typed"; text: string } | { type: "drawn"; imageUrl: string | null };
+  certificateId: string;
+  pdfReady: boolean;
+}
+
+/** Public verification page (SPEC §8.2 step 8). `snapshot` is exactly what was hashed. */
+export interface PublicCertificate {
+  certificateId: string;
+  documentHash: string;
+  pdfHash: string | null;
+  signedAt: string;
+  signer: { name: string; title: string | null; company: string | null; email: string };
+  proposalTitle: string;
+  version: number;
+  snapshot: unknown;
+  /** Only with a render token (the PDF's certificate page). */
+  evidence?: {
+    ip: string | null;
+    userAgent: string | null;
+    geo: unknown;
+    emailVerified: boolean;
+    otpVerifiedAt: string | null;
+    auditTrail: { event: string; at: string; actor: string; ip: string | null }[];
+  };
 }
 
 /** Minimal metadata for link previews (Open Graph), fetched by the Pages Function. */

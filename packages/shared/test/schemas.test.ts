@@ -179,3 +179,17 @@ describe("publish validation: pricing labels", () => {
     ]);
   });
 });
+
+describe("signing helpers", () => {
+  it("builds the exact consent text from the spec", async () => {
+    const { consentText } = await import("../src/index.js");
+    expect(consentText("Acme Roofing")).toBe(
+      "By checking this box and clicking 'Sign & Accept', I agree that my electronic signature is the legal equivalent of my handwritten signature, that I am authorized to accept this proposal on behalf of Acme Roofing, and that I consent to conducting this transaction and receiving related records electronically. I can download a copy of this proposal and my signature at any time.",
+    );
+  });
+  it("masks emails", async () => {
+    const { maskEmail } = await import("../src/index.js");
+    expect(maskEmail("jane.doe@acme.com")).toBe("j*****e@acme.com");
+    expect(maskEmail("jo@x.io")).toBe("j*@x.io");
+  });
+});

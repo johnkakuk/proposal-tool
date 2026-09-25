@@ -9,9 +9,18 @@ export interface Env {
   SUPABASE_JWT_SECRET: string;
   RESEND_API_KEY: string;
   TRACKING_SALT: string;
+  /** Signs short-lived render tokens (PDF print view) and preview links. */
+  SIGNING_SECRET: string;
   // Vars
   APP_URL: string;
   OWNER_EMAIL: string;
+  /** "Name <address>" used as the From header. */
+  EMAIL_FROM: string;
+  /** resend (production) | mailpit (local dev: Supabase's bundled Mailpit) | memory (tests). */
+  EMAIL_TRANSPORT?: "resend" | "mailpit" | "memory";
+  MAILPIT_URL?: string;
+  // Bindings
+  BROWSER: Fetcher;
   // KV
   OAUTH_KV: KVNamespace;
   RATE_KV: KVNamespace;
@@ -23,6 +32,7 @@ export const REQUIRED_SECRETS = [
   "SUPABASE_JWT_SECRET",
   "RESEND_API_KEY",
   "TRACKING_SALT",
+  "SIGNING_SECRET",
 ] as const satisfies readonly (keyof Env)[];
 
 /** Set by auth middleware on authenticated routes. */

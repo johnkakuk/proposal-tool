@@ -1,15 +1,18 @@
 import type { Env } from "./env.js";
 import { serviceClient } from "./lib/supabase.js";
+import { retryPendingSignedPdfs } from "./services/afterSigning.js";
 
 /** Cron jobs (SPEC §13). Schedules are defined in wrangler.jsonc. */
 export async function handleScheduled(controller: ScheduledController, env: Env): Promise<void> {
   switch (controller.cron) {
     case "0 * * * *":
+      await retryPendingSignedPdfs(env, serviceClient(env));
       // Phase 5: mark expired proposals, "expiring in 3 days" emails, daily digest at 07:00 owner time.
       return;
     case "0 10 * * *":
       await keepAlive(env);
-      // Phase 6: heatmap rollup + raw-point cleanup. Phase 4: OTP cleanup.
+      await serviceClient(env).from("otp_codes").delete().lt("expires_at", new Date(Date.now() - 86_400_000).toISOString());
+      // Phase 6: heatmap rollup + raw-point cleanup.
       return;
     default:
       console.warn(`Unknown cron: ${controller.cron}`);
