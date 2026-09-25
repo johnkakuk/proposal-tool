@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EmailSchema, ShortTextSchema, UrlSchema } from "./common.js";
+import { DocIdSchema, EmailSchema, ShortTextSchema, UrlSchema } from "./common.js";
 import { ProposalContentSchema } from "./content.js";
 import { ProposalStatusSchema } from "./db.js";
 import { PricingSchema } from "./pricing.js";
@@ -46,6 +46,8 @@ const uuid = z.uuid();
 export const CreateProposalSchema = z.object({
   title: ShortTextSchema.trim().min(1, "Title is required"),
   clientId: uuid.nullable().optional(),
+  /** Create the client inline instead of passing clientId (AI tools). */
+  client: ClientInputSchema.optional(),
   templateId: uuid.nullable().optional(),
   content: ProposalContentSchema.optional(),
   pricing: PricingSchema.optional(),
@@ -95,4 +97,40 @@ export const SaveAsTemplateSchema = z.object({
 /** "Send email" to the client (SPEC §9): optional personal message. */
 export const SendProposalEmailSchema = z.object({
   message: z.string().trim().max(5_000).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Block-level editing (MCP tools + REST mirrors, SPEC §10.2)
+// ---------------------------------------------------------------------------
+
+/** Where to put a block: an index, next to another block, or at the end (before the signature). */
+export const BlockPositionSchema = z
+  .union([
+    z.object({ index: z.number().int().min(0) }),
+    z.object({ afterBlockId: DocIdSchema }),
+    z.object({ beforeBlockId: DocIdSchema }),
+    z.literal("end"),
+  ])
+  .default("end");
+
+export const InsertBlockSchema = z.object({
+  block: z.object({ id: DocIdSchema.optional(), type: z.string(), props: z.record(z.string(), z.unknown()).default({}), hidden: z.boolean().optional() }),
+  position: BlockPositionSchema,
+});
+
+export const UpdateBlockSchema = z.object({
+  /** Shallow-merged into the block's props. */
+  props: z.record(z.string(), z.unknown()).optional(),
+  hidden: z.boolean().optional(),
+});
+
+export const MoveBlockSchema = z.object({ position: BlockPositionSchema });
+
+export const ReplaceContentSchema = z.object({ content: ProposalContentSchema, pricing: PricingSchema.optional() });
+export const SetPricingSchema = z.object({ pricing: PricingSchema });
+
+export const UpdateProposalMetaSchema = z.object({
+  title: ShortTextSchema.trim().min(1).optional(),
+  clientId: uuid.nullable().optional(),
+  expiresAt: z.iso.datetime({ offset: true }).nullable().optional(),
 });

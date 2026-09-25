@@ -9,15 +9,30 @@ import {
   TemplateInputSchema,
   TemplatePatchSchema,
   UpdateProposalSchema,
+  InsertBlockSchema,
+  UpdateBlockSchema,
+  MoveBlockSchema,
+  ReplaceContentSchema,
+  SetPricingSchema,
+  getBlockSchemaDocument,
 } from "@bridger/shared";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../../env.js";
 import { serviceClient } from "../../lib/supabase.js";
 import { body, parseOr422 } from "../../lib/validate.js";
-import { requireOwner } from "../../middleware/auth.js";
+import { requireAuth, requireHuman } from "../../middleware/auth.js";
+import { ctx, uuidParam } from "../../lib/ctx.js";
+import * as blocks from "../../services/blocks.js";
+import * as credentials from "../../services/credentials.js";
+import { isAutomated } from "../../services/context.js";
+import { onAiDraftCreated, onAiPublished } from "../../services/notify.js";
+import { createPreviewUrl } from "../../services/preview.js";
+import { getWorkspaceContext } from "../../services/workspace.js";
+import { openApiDocument } from "./openapi.js";
+import { consentKey, type PendingConsent } from "../oauth.js";
+import { ApiError } from "../../lib/errors.js";
 import * as clients from "../../services/clients.js";
-import type { ServiceContext } from "../../services/context.js";
 import * as proposals from "../../services/proposals.js";
 import { publishProposal } from "../../services/publish.js";
 import { sendProposalEmail } from "../../services/sendProposal.js";
@@ -29,33 +44,52 @@ import { loadSignature } from "../../services/public.js";
 import * as templates from "../../services/templates.js";
 
 /**
- * REST v1 (SPEC §10.3). Used by the admin SPA now; Phase 7 adds API-key/OAuth auth
- * and the MCP tools on top of the same services.
+ * REST v1 (SPEC §10.3). The admin SPA, scripts (API keys), and AI clients (OAuth) all use
+ * these routes; the MCP tools (src/mcp) call the same services. Automated callers can't
+ * delete anything or manage credentials (requireHuman).
  */
 
-function ctx(c: Context<AppEnv>): ServiceContext {
-  return {
-    db: serviceClient(c.env),
-    ownerId: c.get("ownerId"),
-    actor: c.get("actor"),
-    createdVia: "manual",
-    ip: c.req.header("CF-Connecting-IP"),
-    userAgent: c.req.header("User-Agent"),
-  };
-}
-
-const id = (c: Context<AppEnv>) => parseOr422(z.uuid({ message: "Invalid id" }), c.req.param("id"));
+const id = (c: Parameters<typeof uuidParam>[0]) => uuidParam(c);
 
 export const v1 = new Hono<AppEnv>()
-  .use(requireOwner)
+  // Public: the OpenAPI description (for ChatGPT Actions, Zapier)
+  .get("/openapi.json", (c) => c.json(openApiDocument(c.env.APP_URL)))
+  .use(requireAuth)
+
+  // AI helpers (mirrors of MCP tools)
+  .get("/workspace/context", async (c) => c.json(await getWorkspaceContext(ctx(c))))
+  .get("/schema/blocks", (c) => c.json(getBlockSchemaDocument()))
+  .post("/proposals/:id/preview-url", async (c) => c.json(await createPreviewUrl(ctx(c), c.env, id(c))))
+  .put("/proposals/:id/content", async (c) => {
+    const input = await body(c, ReplaceContentSchema);
+    return c.json(await blocks.replaceContent(ctx(c), id(c), input.content, input.pricing));
+  })
+  .put("/proposals/:id/pricing", async (c) => {
+    const p = await blocks.setPricing(ctx(c), id(c), (await body(c, SetPricingSchema)).pricing);
+    return c.json({ totals: p.totals, proposal: p });
+  })
+  .post("/proposals/:id/blocks", async (c) => c.json(await blocks.insertBlock(ctx(c), id(c), await body(c, InsertBlockSchema)), 201))
+  .patch("/proposals/:id/blocks/:blockId", async (c) => c.json(await blocks.updateBlock(ctx(c), id(c), c.req.param("blockId"), await body(c, UpdateBlockSchema))))
+  .delete("/proposals/:id/blocks/:blockId", async (c) => c.json(await blocks.deleteBlock(ctx(c), id(c), c.req.param("blockId"))))
+  .post("/proposals/:id/blocks/:blockId/move", async (c) => c.json(await blocks.moveBlock(ctx(c), id(c), c.req.param("blockId"), (await body(c, MoveBlockSchema)).position)))
 
   // Proposals
   .get("/proposals", async (c) => c.json(await proposals.listProposals(ctx(c), parseOr422(ListProposalsQuerySchema, c.req.query()))))
-  .post("/proposals", async (c) => c.json(await proposals.createProposal(ctx(c), await body(c, CreateProposalSchema)), 201))
+  .post("/proposals", async (c) => {
+    const s = ctx(c);
+    const p = await proposals.createProposal(s, await body(c, CreateProposalSchema));
+    if (isAutomated(s)) c.executionCtx.waitUntil(onAiDraftCreated(c.env, s.db, p.id, s.createdViaClient ?? "AI"));
+    return c.json(p, 201);
+  })
   .get("/proposals/:id", async (c) => c.json(await proposals.getProposal(ctx(c), id(c))))
   .patch("/proposals/:id", async (c) => c.json(await proposals.updateProposal(ctx(c), id(c), await body(c, UpdateProposalSchema))))
   .post("/proposals/:id/duplicate", async (c) => c.json(await proposals.duplicateProposal(ctx(c), id(c), await body(c, DuplicateProposalSchema)), 201))
-  .post("/proposals/:id/publish", async (c) => c.json(await publishProposal(ctx(c), id(c), c.env.APP_URL)))
+  .post("/proposals/:id/publish", async (c) => {
+    const s = ctx(c);
+    const r = await publishProposal(s, id(c), c.env.APP_URL);
+    if (r.published && isAutomated(s)) c.executionCtx.waitUntil(onAiPublished(c.env, s.db, r.proposal.id, s.createdViaClient ?? "AI", r.proposal.current_version));
+    return c.json(r);
+  })
   // Owner-side events worth auditing that don't change data (SPEC §6.1).
   .post("/proposals/:id/events", async (c) => {
     const { type } = await body(c, z.object({ type: z.enum(["link_copied"]) }));
@@ -90,7 +124,7 @@ export const v1 = new Hono<AppEnv>()
     });
   })
   .post("/proposals/:id/send-email", async (c) => c.json(await sendProposalEmail(ctx(c), c.env, id(c), await body(c, SendProposalEmailSchema))))
-  .delete("/proposals/:id", async (c) => {
+  .delete("/proposals/:id", requireHuman, async (c) => {
     await proposals.purgeProposal(ctx(c), id(c));
     return c.body(null, 204);
   })
@@ -129,20 +163,61 @@ export const v1 = new Hono<AppEnv>()
   .get("/templates/:id", async (c) => c.json(await templates.getTemplate(ctx(c), id(c))))
   .patch("/templates/:id", async (c) => c.json(await templates.updateTemplate(ctx(c), id(c), await body(c, TemplatePatchSchema))))
   .post("/templates/:id/duplicate", async (c) => c.json(await templates.duplicateTemplate(ctx(c), id(c)), 201))
-  .delete("/templates/:id", async (c) => {
+  .delete("/templates/:id", requireHuman, async (c) => {
     await templates.deleteTemplate(ctx(c), id(c));
     return c.body(null, 204);
   })
 
+  // Settings → AI & API (owner only)
+  .get("/api-keys", requireHuman, async (c) => c.json(await credentials.listApiKeys(ctx(c))))
+  .post("/api-keys", requireHuman, async (c) => c.json(await credentials.createApiKey(ctx(c), (await body(c, z.object({ name: z.string().trim().min(1).max(60) }))).name), 201))
+  .delete("/api-keys/:id", requireHuman, async (c) => {
+    await credentials.revokeApiKey(ctx(c), id(c));
+    return c.body(null, 204);
+  })
+  // OAuth consent screen (/app/connect/:id)
+  .get("/oauth/consent/:cid", requireHuman, async (c) => {
+    const pending = await c.env.OAUTH_KV.get<PendingConsent>(consentKey(c.req.param("cid")), "json");
+    if (!pending) throw new ApiError(404, "expired", "This connection request expired. Start again from the app you're connecting.");
+    return c.json({ clientName: pending.clientName, redirectHost: pending.redirectHost, scope: pending.request.scope });
+  })
+  .post("/oauth/consent/:cid", requireHuman, async (c) => {
+    const { approve } = await body(c, z.object({ approve: z.boolean() }));
+    const key = consentKey(c.req.param("cid"));
+    const pending = await c.env.OAUTH_KV.get<PendingConsent>(key, "json");
+    if (!pending) throw new ApiError(404, "expired", "This connection request expired. Start again from the app you're connecting.");
+    await c.env.OAUTH_KV.delete(key);
+    if (!approve) {
+      const url = new URL(pending.request.redirectUri);
+      url.searchParams.set("error", "access_denied");
+      if (pending.request.state) url.searchParams.set("state", pending.request.state);
+      return c.json({ redirectTo: url.toString() });
+    }
+    if (!c.env.OAUTH_PROVIDER) throw new ApiError(503, "unavailable", "OAuth isn't available.");
+    const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
+      request: pending.request,
+      userId: c.get("ownerId"),
+      metadata: { clientName: pending.clientName },
+      scope: pending.request.scope,
+      props: { ownerId: c.get("ownerId"), clientName: pending.clientName, principal: "oauth" },
+    });
+    return c.json({ redirectTo });
+  })
+  .get("/connections", requireHuman, async (c) => c.json(await credentials.listConnections(ctx(c), c.env.OAUTH_PROVIDER)))
+  .delete("/connections/:grantId", requireHuman, async (c) => {
+    await credentials.revokeConnection(ctx(c), c.env.OAUTH_PROVIDER, c.req.param("grantId"));
+    return c.body(null, 204);
+  })
+
   // Tracking settings (SPEC §7.6): "this browser is me" and the current IP for exclusion
-  .get("/tracking/whoami", async (c) =>
+  .get("/tracking/whoami", requireHuman, async (c) =>
     c.json({ ip: c.req.header("CF-Connecting-IP") ?? "127.0.0.1", ownerCookie: await hasOwnerCookie(c.req.header("Cookie"), c.env.SIGNING_SECRET) }),
   )
-  .post("/tracking/owner-cookie", async (c) => {
+  .post("/tracking/owner-cookie", requireHuman, async (c) => {
     c.header("Set-Cookie", ownerCookieHeader(await ownerCookieValue(c.env.SIGNING_SECRET), c.env.APP_URL.startsWith("https"), 365 * 86_400));
     return c.json({ ownerCookie: true });
   })
-  .delete("/tracking/owner-cookie", async (c) => {
+  .delete("/tracking/owner-cookie", requireHuman, async (c) => {
     c.header("Set-Cookie", ownerCookieHeader("", c.env.APP_URL.startsWith("https"), 0));
     return c.json({ ownerCookie: false, cookie: OWNER_COOKIE });
   })
@@ -152,7 +227,7 @@ export const v1 = new Hono<AppEnv>()
   .post("/clients", async (c) => c.json(await clients.createClient(ctx(c), await body(c, ClientInputSchema)), 201))
   .get("/clients/:id", async (c) => c.json(await clients.getClient(ctx(c), id(c))))
   .patch("/clients/:id", async (c) => c.json(await clients.updateClient(ctx(c), id(c), await body(c, ClientPatchSchema))))
-  .delete("/clients/:id", async (c) => {
+  .delete("/clients/:id", requireHuman, async (c) => {
     await clients.deleteClient(ctx(c), id(c));
     return c.body(null, 204);
   });

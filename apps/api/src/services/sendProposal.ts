@@ -6,7 +6,7 @@ import { sendEmail } from "../lib/email.js";
 import { ApiError } from "../lib/errors.js";
 import { audit } from "./audit.js";
 import { getClientRow } from "./clients.js";
-import type { ServiceContext } from "./context.js";
+import { isAutomated, type ServiceContext } from "./context.js";
 import { ownerContext, publicUrl } from "./notify.js";
 import { getProposal } from "./proposals.js";
 import { getSettings } from "./settings.js";
@@ -16,6 +16,10 @@ import { getSettings } from "./settings.js";
  * clicks "Send email" (or, in Phase 7, an MCP client with ai_can_email_client on).
  */
 export async function sendProposalEmail(ctx: ServiceContext, env: Env, id: string, input: z.output<typeof SendProposalEmailSchema>): Promise<{ to: string }> {
+  if (isAutomated(ctx)) {
+    const { data } = await ctx.db.from("settings").select("ai_can_email_client").eq("owner_id", ctx.ownerId).single();
+    if (!data?.ai_can_email_client) throw new ApiError(403, "ai_email_disabled", "Emailing clients by AI is turned off in Settings → AI & API. Give John the link instead.");
+  }
   const p = await getProposal(ctx, id);
   if (p.current_version === 0) throw new ApiError(409, "not_published", "Publish the proposal before emailing it.");
   if (p.status === "signed" || p.status === "declined" || p.status === "archived") throw new ApiError(409, "not_sendable", `A ${p.status} proposal can't be sent.`);

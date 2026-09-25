@@ -11,6 +11,7 @@ import { onDeclined, onExtensionRequested } from "../services/notify.js";
 import { sendOtp, verifyOtp } from "../services/otp.js";
 import { getPublicCertificate, getPublicMeta, getPublicProposal, loadPublicRow, loadSignature, requestExtension } from "../services/public.js";
 import { declineProposal, signProposal } from "../services/signing.js";
+import { getPreview } from "../services/preview.js";
 
 const scale = (c: Context<AppEnv>) => Number(c.env.RATE_LIMIT_SCALE ?? 1) || 1;
 const ip = (c: Context<AppEnv>) => c.req.header("CF-Connecting-IP") ?? "unknown";
@@ -31,6 +32,8 @@ export const publicRoutes = new Hono<AppEnv>()
     c.header("X-Robots-Tag", "noindex, nofollow");
     c.header("Referrer-Policy", "same-origin");
   })
+  // Signed 1-hour draft preview (SPEC §10.2 get_preview_url); never tracked
+  .get("/preview/:token", async (c) => c.json(await getPreview(c.env, serviceClient(c.env), c.req.param("token"))))
   .get("/proposals/:slug", async (c) => c.json(await getPublicProposal(serviceClient(c.env), c.req.param("slug"), c.env.OWNER_EMAIL)))
   .get("/proposals/:slug/meta", async (c) => c.json(await getPublicMeta(serviceClient(c.env), c.req.param("slug"))))
   .get("/proposals/:slug/certificate", async (c) => {

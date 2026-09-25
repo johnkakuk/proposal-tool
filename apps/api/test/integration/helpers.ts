@@ -16,6 +16,7 @@ export function env(): Env {
     APP_URL: "http://localhost:5173",
     OWNER_EMAIL: "owner@bridger.local",
     RATE_KV: memoryKv(),
+    OAUTH_KV: memoryKv(),
     SIGNING_SECRET: "integration-signing-secret",
     EMAIL_FROM: "Bridger Digital <proposals@bridger.test>",
     EMAIL_TRANSPORT: "memory",
@@ -45,10 +46,31 @@ export function api(token: string | null) {
   };
 }
 
-/** Minimal in-memory stand-in for a KV namespace (get/put only). */
+/** In-memory stand-in for a KV namespace (enough for rate limits and the OAuth provider). */
 export function memoryKv() {
-  const m = new Map<string, string>();
-  return { get: async (k: string) => m.get(k) ?? null, put: async (k: string, v: string) => void m.set(k, v) };
+  const m = new Map<string, { value: string; expires?: number }>();
+  const live = (k: string) => {
+    const e = m.get(k);
+    if (e?.expires && e.expires < Date.now()) m.delete(k);
+    return m.get(k);
+  };
+  return {
+    get: async (k: string, opts?: string | { type?: string }) => {
+      const e = live(k);
+      if (!e) return null;
+      const type = typeof opts === "string" ? opts : opts?.type;
+      return type === "json" ? JSON.parse(e.value) : e.value;
+    },
+    put: async (k: string, v: string, opts?: { expirationTtl?: number }) => void m.set(k, { value: v, expires: opts?.expirationTtl ? Date.now() + opts.expirationTtl * 1000 : undefined }),
+    delete: async (k: string) => void m.delete(k),
+    list: async (opts: { prefix?: string; limit?: number; cursor?: string } = {}) => {
+      const keys = [...m.keys()].filter((k) => live(k) && k.startsWith(opts.prefix ?? "")).sort();
+      const start = opts.cursor ? Number(opts.cursor) : 0;
+      const page = keys.slice(start, start + (opts.limit ?? 1000));
+      const done = start + page.length >= keys.length;
+      return { keys: page.map((name) => ({ name })), list_complete: done, cursor: done ? undefined : String(start + page.length) };
+    },
+  };
 }
 
 /** Calls a public (unauthenticated) endpoint. */

@@ -1,4 +1,5 @@
-import type { AuditActor } from "@bridger/shared";
+import type { AuditActor, CreatedVia } from "@bridger/shared";
+import type { OAuthHelpers } from "@cloudflare/workers-oauth-provider";
 
 /** Worker bindings and secrets (SPEC §2). Secrets are set with `wrangler secret put`. */
 export interface Env {
@@ -25,6 +26,8 @@ export interface Env {
   BROWSER: Fetcher;
   // KV
   OAUTH_KV: KVNamespace;
+  /** Set by the OAuth provider wrapper (src/index.ts); absent in unit tests. */
+  OAUTH_PROVIDER?: OAuthHelpers;
   RATE_KV: KVNamespace;
 }
 
@@ -37,10 +40,18 @@ export const REQUIRED_SECRETS = [
   "SIGNING_SECRET",
 ] as const satisfies readonly (keyof Env)[];
 
+/** Who is calling: John (Supabase session), an API key, or an OAuth-connected AI client. */
+export type Principal = "owner" | "api_key" | "oauth";
+
 /** Set by auth middleware on authenticated routes. */
 export interface AuthVariables {
   ownerId: string;
   actor: AuditActor;
+  principal: Principal;
+  /** How proposals created by this caller are attributed. */
+  createdVia: Exclude<CreatedVia, "template">;
+  /** e.g. "Claude", "ChatGPT", or the API key's name. */
+  clientName?: string;
 }
 
 export type AppEnv = { Bindings: Env; Variables: AuthVariables };

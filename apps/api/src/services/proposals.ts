@@ -22,7 +22,7 @@ import {
 import type { z } from "zod";
 import { ApiError } from "../lib/errors.js";
 import { audit, auditEdited } from "./audit.js";
-import { getClientRow } from "./clients.js";
+import { createClient, getClientRow } from "./clients.js";
 import { found, must, type ServiceContext } from "./context.js";
 import { getSettings } from "./settings.js";
 
@@ -98,6 +98,8 @@ export async function getProposal(ctx: ServiceContext, id: string): Promise<Prop
 }
 
 export async function createProposal(ctx: ServiceContext, input: z.output<typeof CreateProposalSchema>): Promise<ProposalDetail> {
+  if (input.client && input.clientId) throw new ApiError(422, "invalid_input", "Pass either clientId or client, not both.");
+  if (input.client) input = { ...input, clientId: (await createClient(ctx, input.client)).id };
   const client = input.clientId ? await getClientRow(ctx, input.clientId) : null;
   const settings = await getSettings(ctx);
   const clientName = client ? (client.company ?? client.name) : "";

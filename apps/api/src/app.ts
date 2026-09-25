@@ -5,13 +5,15 @@ import { ApiError } from "./lib/errors.js";
 import { health } from "./routes/health.js";
 import { publicRoutes } from "./routes/public.js";
 import { track } from "./routes/track.js";
+import { oauth } from "./routes/oauth.js";
 import { v1 } from "./routes/v1/index.js";
 
 /**
  * Routes on proposals.bridgerdigital.com that reach the Worker (SPEC §2):
  *   /api/*          REST (admin, public viewer, v1)
- *   /mcp            MCP server                     — Phase 7
- *   /oauth/*, /.well-known/*  OAuth 2.1 for MCP    — Phase 7
+ *   /mcp            MCP server (src/mcp), behind the OAuth provider (src/index.ts)
+ *   /oauth/*, /.well-known/*  OAuth 2.1: the provider serves discovery, /oauth/register,
+ *                   /oauth/token; /oauth/authorize (here) starts consent
  *   /t/*            tracking ingest
  * All business logic lives in src/services/* (SPEC §10.5); routes stay thin.
  */
@@ -21,6 +23,7 @@ export function createApp() {
   app.route("/api/health", health);
   app.route("/api/public", publicRoutes);
   app.route("/t", track);
+  app.route("/oauth", oauth);
   app.route("/api/v1", v1);
 
   app.notFound((c) => c.json({ error: { code: "not_found", message: `No route for ${c.req.method} ${c.req.path}` } }, 404));

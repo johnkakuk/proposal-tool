@@ -1,7 +1,7 @@
 import { PricingSchema, ProposalContentSchema, checkPublishable, documentHash, type ProposalDetail } from "@bridger/shared";
 import { ApiError } from "../lib/errors.js";
 import { getClientRow } from "./clients.js";
-import { must, type ServiceContext } from "./context.js";
+import { isAutomated, must, type ServiceContext } from "./context.js";
 import { getProposal } from "./proposals.js";
 import { getSettings } from "./settings.js";
 
@@ -21,6 +21,10 @@ export const publicUrl = (appUrl: string, slug: string) => `${appUrl.replace(/\/
  * The link never changes; the viewer always shows the latest published version.
  */
 export async function publishProposal(ctx: ServiceContext, id: string, appUrl: string): Promise<PublishResult> {
+  if (isAutomated(ctx)) {
+    const { data } = await ctx.db.from("settings").select("ai_can_publish").eq("owner_id", ctx.ownerId).single();
+    if (!data?.ai_can_publish) throw new ApiError(403, "ai_publish_disabled", "Publishing by AI is turned off in Settings → AI & API. Leave it as a draft and ask John to publish.");
+  }
   const p = await getProposal(ctx, id);
   if (p.signed_at) throw new ApiError(409, "locked", "This proposal is signed and locked. Duplicate it as a new revision to make changes.");
   if (p.status === "archived") throw new ApiError(409, "archived", "Archived proposals can't be published.");

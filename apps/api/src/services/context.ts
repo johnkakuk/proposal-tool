@@ -12,6 +12,8 @@ export interface ServiceContext {
   actor: AuditActor;
   /** How new proposals are attributed: manual (admin app), mcp, or api. */
   createdVia: Exclude<CreatedVia, "template">;
+  /** owner = John in the app; api_key / oauth = scripts and AI clients. */
+  principal: "owner" | "api_key" | "oauth";
   /** e.g. "Claude", "ChatGPT" for MCP clients. */
   createdViaClient?: string;
   ip?: string;
@@ -42,3 +44,6 @@ export function found<T>(res: PgResult<T>, what: string, label: string): T {
   if (row === null) throw new ApiError(404, "not_found", `${label} not found`);
   return row;
 }
+
+/** True when an AI client or script (not John in the app) is acting. */
+export const isAutomated = (ctx: ServiceContext) => ctx.principal !== "owner";
