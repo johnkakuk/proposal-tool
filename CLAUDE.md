@@ -7,7 +7,7 @@ Self-hosted proposal builder (Prospero replacement) for Bridger Digital. The ful
 - **TypeScript `strict` everywhere.** Validate every external input (API, MCP, tracking, forms) with Zod schemas from `@bridger/shared`.
 - **Money is integer cents.** Never use floats for money. Quantities and percents allow at most 2 decimals and are converted to integer hundredths (`toHundredths`) before any math.
 - **Pricing math lives only in `packages/shared/src/pricing.ts`.** The client and server both use it. The server always recomputes and never trusts client totals.
-- **Signed proposals are immutable**, enforced by DB triggers (`supabase/migrations/*_immutability.sql`) *and* in app code. The only way forward is "Duplicate as new revision".
+- **Signed proposals are immutable**, enforced by DB triggers (`supabase/migrations/*_immutability.sql`) *and* in app code. The only way forward is "Duplicate as new revision". The single exception is John permanently deleting an **archived** signed proposal: `purge_proposal(id, owner, p_confirm_signed => true)` (human-only route, `?confirmSigned=true`, after typing "delete"), which removes it with its signature, versions, audit trail, and stored files in one transaction. Nothing else may update or delete signed records.
 - **Service-role key stays in Worker secrets.** It must never reach the browser.
 - **The AI never deletes.** MCP tools can archive, not delete.
 
@@ -98,6 +98,8 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - Portaled UI (`PublicModal`) sits outside the `ThemeScope` div, so it gets the variables through `useThemeVars()`.
 - Admin UI: secondary text is `text-slate-500` minimum (never `-400`). `e2e/a11y.spec.ts` runs axe (WCAG 2.1 A/AA) on the main screens and fails on serious or critical violations.
 - Vertical rhythm: `--space-block` (2rem between objects) and `--space-h2` (~50px above H2s) on `.proposal-theme` apply to both the editor canvas and the rendered proposal (`index.css`). Adjust spacing there, not per block.
+- Fonts: `ThemeScope` gates content behind `FontGate` (spinner until the theme's Google Fonts load, max 2.5 s, then a fade), and `AdminRoot` does the same for Inter. Pass `gate={false}` for live previews that switch fonts; print mode skips the gate. Loading states use `<Preloader>` (static copy in `index.html`). a11y audits wait for the fade to finish.
+- Cursor: a base rule in `index.css` gives every clickable element `cursor: pointer` (Tailwind v4 defaults buttons to the arrow). `e2e/cursor.spec.ts` scans the main screens for exceptions.
 - Route errors (including stale chunks after a deploy) render `RouteError`.
 
 ## Deployment

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { Button, ErrorNote, Modal, inputClass } from "./ui";
 
 export function RenameDialog({ open, onClose, title, label, initial, onSave }: { open: boolean; onClose: () => void; title: string; label: string; initial: string; onSave: (value: string) => Promise<unknown> }) {
@@ -50,6 +50,7 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   danger,
+  confirmText,
 }: {
   open: boolean;
   onClose: () => void;
@@ -58,23 +59,39 @@ export function ConfirmDialog({
   confirmLabel: string;
   onConfirm: () => Promise<unknown>;
   danger?: boolean;
+  /** For irreversible actions: the confirm button stays disabled until this exact word is typed. */
+  confirmText?: string;
 }) {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [typed, setTyped] = useState("");
+  const typedId = useId();
   useEffect(() => {
-    if (open) setError(null);
+    if (open) {
+      setError(null);
+      setTyped("");
+    }
   }, [open]);
+  const confirmed = !confirmText || typed.trim() === confirmText;
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <div className="space-y-4">
         <div className="text-sm text-slate-600">{body}</div>
+        {confirmText && (
+          <div>
+            <label htmlFor={typedId} className="block text-sm font-medium">
+              Type <span className="rounded bg-slate-100 px-1 font-mono">{confirmText}</span> to confirm
+            </label>
+            <input id={typedId} autoFocus autoComplete="off" spellCheck={false} className={`mt-1 ${inputClass} font-mono`} value={typed} onChange={(e) => setTyped(e.target.value)} />
+          </div>
+        )}
         <ErrorNote error={error} />
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button
             variant={danger ? "danger" : "primary"}
             className={danger ? "!bg-red-600 !text-white !ring-red-600 hover:!bg-red-700" : ""}
-            disabled={busy}
+            disabled={busy || !confirmed}
             onClick={async () => {
               setBusy(true);
               try {

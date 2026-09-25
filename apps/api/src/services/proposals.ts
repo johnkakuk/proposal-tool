@@ -260,14 +260,21 @@ export async function restoreProposal(ctx: ServiceContext, id: string): Promise<
 }
 
 /**
- * Permanently deletes an archived, unsigned proposal with its versions and audit trail
- * (purge_proposal RPC). Signed proposals can't be purged; the database enforces it too.
+ * Permanently deletes an archived proposal with its versions and audit trail
+ * (purge_proposal RPC, one transaction). A signed proposal also loses its signature and
+ * signed PDF, so it needs `confirmSigned` (the app asks John to type "delete"); the
+ * database refuses without it too. Stored files are removed after the rows are gone.
  */
-export async function purgeProposal(ctx: ServiceContext, id: string): Promise<void> {
+export async function purgeProposal(ctx: ServiceContext, id: string, { confirmSigned = false }: { confirmSigned?: boolean } = {}): Promise<void> {
   const p = await getProposal(ctx, id);
-  if (p.signed_at) throw new ApiError(409, "locked", "Signed proposals can't be permanently deleted.");
   if (p.status !== "archived") throw new ApiError(409, "not_archived", "Delete (archive) the proposal first; only archived proposals can be permanently deleted.");
-  must(await ctx.db.rpc("purge_proposal", { p_proposal_id: id, p_owner_id: ctx.ownerId }), "delete the proposal");
+  if (p.signed_at && !confirmSigned) throw new ApiError(409, "locked", "This proposal is signed. Permanently deleting it also destroys the signature and signed PDF, so it needs explicit confirmation.");
+  const files = must(await ctx.db.rpc("purge_proposal", { p_proposal_id: id, p_owner_id: ctx.ownerId, p_confirm_signed: confirmSigned }), "delete the proposal") as { bucket: string; path: string }[] | null;
+  // The rows are already gone; a leftover file is orphaned but private, so don't fail the request.
+  for (const bucket of new Set((files ?? []).map((f) => f.bucket))) {
+    const { error } = await ctx.db.storage.from(bucket).remove((files ?? []).filter((f) => f.bucket === bucket).map((f) => f.path));
+    if (error) console.error(`purge ${id}: couldn't remove files from ${bucket}`, error.message);
+  }
 }
 
 export async function saveProposalAsTemplate(ctx: ServiceContext, id: string, input: z.output<typeof SaveAsTemplateSchema>): Promise<TemplateDetail> {

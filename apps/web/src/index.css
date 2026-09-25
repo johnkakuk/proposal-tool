@@ -19,6 +19,38 @@ body {
   @apply bg-slate-50 text-ink antialiased;
 }
 
+/* Tailwind v4 gives buttons the default arrow cursor. Everything clickable gets a
+   pointer; disabled controls say so. Utilities (cursor-default, cursor-grab…) still win. */
+@layer base {
+  :is(button, [role="button"], [role="menuitem"], [role="menuitemradio"], [role="tab"], [role="radio"], [role="checkbox"], [role="switch"], [role="option"], summary, select, label[for], label:has(> input:not([type="text"], [type="email"], [type="url"], [type="number"], [type="password"], [type="search"], [type="tel"], [type="date"]), > select), input:is([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"], [type="submit"], [type="button"])):not(:disabled, [aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  :is(button, select, input, [role="menuitem"], [role="tab"], [role="radio"], [role="switch"]):is(:disabled, [aria-disabled="true"]) {
+    cursor: not-allowed;
+  }
+}
+
+/* Preloader (components/Preloader.tsx; a static copy is in index.html). */
+.bdp-spinner {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 3px solid rgb(15 42 68 / 0.12);
+  border-top-color: var(--color-accent, #0f2a44);
+  animation: bdp-spin 0.8s linear infinite;
+}
+@keyframes bdp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bdp-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Proposal theme + typography (editor canvas, preview, public viewer, print)
    --------------------------------------------------------------------------- */

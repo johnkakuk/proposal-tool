@@ -1,5 +1,6 @@
 import type { ProposalStatus } from "@bridger/shared";
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Preloader } from "./Preloader";
 import { createPortal } from "react-dom";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -98,7 +99,7 @@ export function ErrorNote({ error }: { error: unknown }) {
   );
 }
 
-export const Spinner = () => <div className="p-8 text-sm text-slate-500">Loading…</div>;
+export const Spinner = () => <Preloader />;
 
 export const inputClass =
   "block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";

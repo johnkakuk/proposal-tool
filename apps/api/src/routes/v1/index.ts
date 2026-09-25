@@ -129,7 +129,7 @@ export const v1 = new Hono<AppEnv>()
   })
   .post("/proposals/:id/send-email", async (c) => c.json(await sendProposalEmail(ctx(c), c.env, id(c), await body(c, SendProposalEmailSchema))))
   .delete("/proposals/:id", requireHuman, async (c) => {
-    await proposals.purgeProposal(ctx(c), id(c));
+    await proposals.purgeProposal(ctx(c), id(c), { confirmSigned: c.req.query("confirmSigned") === "true" });
     return c.body(null, 204);
   })
   .post("/proposals/:id/restore", async (c) => c.json(await proposals.restoreProposal(ctx(c), id(c))))

@@ -16,7 +16,8 @@ async function fillDetails(pub: Page, email: string) {
 }
 
 test("publish → open → choose options → verify email → sign → locked, PDF exists, hash verifies", async ({ page, browser }) => {
-  await newTemplateProposal(page, unique("Signing"));
+  const title = unique("Signing");
+  await newTemplateProposal(page, title);
   const url = await publishFromEditor(page);
   const proposalId = page.url().split("/").pop()!;
   const email = `riley.${Date.now().toString(36)}@northwind.test`;
@@ -93,6 +94,30 @@ test("publish → open → choose options → verify email → sign → locked, 
   await expect(page.getByRole("button", { name: "Duplicate as new revision" })).toBeVisible();
   await expect(page.locator(".proposal-editor")).toHaveAttribute("contenteditable", "false");
   await expect(page.getByRole("link", { name: "Signed PDF" })).toBeVisible();
+
+  // Permanently deleting a signed proposal: from the archive, with a warning and a typed "delete"
+  await page.goto("/app");
+  const menu = (item: string) => async () => {
+    await page.getByRole("button", { name: `Actions for ${title}`, exact: true }).click();
+    await page.getByRole("menu", { name: `Actions for ${title}` }).getByRole("menuitem", { name: item }).click();
+  };
+  await menu("Delete")();
+  await page.getByRole("dialog", { name: `Delete “${title}”?` }).getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByLabel("Filter by status").selectOption("archived");
+  await menu("Delete permanently")();
+  const purge = page.getByRole("dialog", { name: `Permanently delete “${title}”?` });
+  await expect(purge).toContainText("This proposal is signed. Deleting it is not recommended.");
+  await expect(purge).toContainText("the client's signature and the signed PDF");
+  const confirm = purge.getByRole("button", { name: "Delete permanently" });
+  await expect(confirm).toBeDisabled();
+  await purge.getByLabel("Type delete to confirm").fill("Delete");
+  await expect(confirm).toBeDisabled();
+  await purge.getByLabel("Type delete to confirm").fill("delete");
+  await confirm.click();
+  await expect(page.getByText(`Permanently deleted “${title}”`)).toBeVisible();
+  const { count } = await adminDb().from("signatures").select("id", { count: "exact", head: true }).eq("proposal_id", proposalId);
+  expect(count).toBe(0);
+  expect((await page.request.get(`/api/public/proposals/${url.split("/p/")[1]}`)).status()).toBe(404);
 });
 
 test("signing a stale version returns 409 and asks the client to review", async ({ page, browser }) => {

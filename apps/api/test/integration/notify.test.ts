@@ -172,6 +172,8 @@ describe("declined and extension requests", () => {
     const p = await published(`Extension ${run}`);
     await adminDb().from("proposals").update({ expires_at: new Date(Date.now() - 60_000).toISOString() }).eq("id", p.id);
     await publicApi("POST", `/proposals/${p.slug}/extension-request`, { message: "Two more weeks?" });
+    // Emails send in the background; let the first one claim the day's slot before the second request.
+    await flush();
     await publicApi("POST", `/proposals/${p.slug}/extension-request`, { message: "Hello?" });
     await flush();
     const mails = outboxFor(p.id, "extension_requested");
