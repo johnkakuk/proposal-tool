@@ -103,7 +103,7 @@ export function BrandSettings() {
       setBrand(parsed.success ? parsed.data : { theme: FALLBACK_THEME, company: { name: "Bridger Digital" } });
     }
   }, [row.data, brand]);
-  useGoogleFonts([...new Set([...HEADING_FONTS, ...BODY_FONTS])].slice(0, 20));
+  useGoogleFonts([...new Set([...HEADING_FONTS, ...BODY_FONTS])].slice(0, 20), { fetchFaces: false });
   if (!brand || !row.data) return <Spinner />;
 
   const setColor = (k: keyof Brand["theme"]["colors"]) => (v: string) => setBrand({ ...brand, theme: { ...brand.theme, colors: { ...brand.theme.colors, [k]: v.toUpperCase() } } });
@@ -208,7 +208,7 @@ export function BrandSettings() {
         </div>
         <div aria-label="Brand preview">
           <div className="mb-1 text-xs font-medium text-slate-500">Preview</div>
-          <ThemeScope theme={brand.theme}>
+          <ThemeScope theme={brand.theme} gate={false}>
             <div className="overflow-hidden rounded-lg ring-1 ring-slate-200" style={{ background: "var(--color-background)" }}>
               <div className="flex items-center justify-between border-b border-black/10 px-3 py-2">
                 <BrandLogo theme={brand.theme} surface={brand.theme.colors.background} alt="" className="h-5 w-auto" fallback={<span className="font-(family-name:--font-heading) text-sm font-bold text-(--color-primary-text)">{brand.company.name}</span>} />

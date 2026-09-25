@@ -98,6 +98,8 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - Portaled UI (`PublicModal`) sits outside the `ThemeScope` div, so it gets the variables through `useThemeVars()`.
 - Admin UI: secondary text is `text-slate-500` minimum (never `-400`). `e2e/a11y.spec.ts` runs axe (WCAG 2.1 A/AA) on the main screens and fails on serious or critical violations.
 - Vertical rhythm: `--space-block` (2rem between objects) and `--space-h2` (~50px above H2s) on `.proposal-theme` apply to both the editor canvas and the rendered proposal (`index.css`). Adjust spacing there, not per block.
+- Fonts: `ThemeScope` gates content behind `FontGate` (spinner until the theme's Google Fonts load, max 2.5 s, then a fade), and `AdminRoot` does the same for Inter. Pass `gate={false}` for live previews that switch fonts; print mode skips the gate. Loading states use `<Preloader>` (static copy in `index.html`). a11y audits wait for the fade to finish.
+- Cursor: a base rule in `index.css` gives every clickable element `cursor: pointer` (Tailwind v4 defaults buttons to the arrow). `e2e/cursor.spec.ts` scans the main screens for exceptions.
 - Route errors (including stale chunks after a deploy) render `RouteError`.
 
 ## Deployment

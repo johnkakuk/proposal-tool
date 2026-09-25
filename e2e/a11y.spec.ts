@@ -9,6 +9,8 @@ import { login, newTemplateProposal, publishFromEditor, unique } from "./helpers
 test.describe.configure({ timeout: 120_000 });
 
 async function audit(page: Page, name: string) {
+  // Let font gates finish and the fade-in complete; mid-fade colors would read as low contrast.
+  await page.waitForFunction(() => !document.querySelector('[aria-label="Loading fonts"]') && document.getAnimations().every((a) => a.playState !== "running"));
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
   const report = serious.map((v) => `${v.id} (${v.impact}): ${v.help}\n  ${v.nodes.slice(0, 4).map((n) => `${n.target.join(" ")} → ${n.html.slice(0, 140)} :: ${(n.failureSummary ?? "").split("\n").slice(1, 2).join("")}`).join("\n  ")}`).join("\n");

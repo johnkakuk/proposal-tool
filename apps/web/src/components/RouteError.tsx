@@ -1,4 +1,5 @@
 import { isRouteErrorResponse, useRouteError } from "react-router";
+import { Preloader } from "./Preloader";
 
 /** Friendly error page for any route (instead of React Router's developer default). */
 export function RouteError() {
@@ -31,5 +32,5 @@ export function RouteError() {
 
 /** Shown while a lazy route's code loads. */
 export function RouteLoading() {
-  return <div className="min-h-screen" aria-busy="true" aria-label="Loading" />;
+  return <Preloader fullScreen />;
 }

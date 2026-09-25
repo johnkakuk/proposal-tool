@@ -28,7 +28,8 @@ export function useRenderContextValue(
 export function RenderProvider({ value, theme, overrides, children }: { value: RenderContextValue; theme?: Theme | null; overrides?: ProposalContent["theme"]; children: ReactNode }) {
   return (
     <RenderContext value={value}>
-      <ThemeScope theme={theme} overrides={overrides}>
+      {/* Print (PDF) waits for fonts itself via data-print-ready; a fade there could be captured mid-way. */}
+      <ThemeScope theme={theme} overrides={overrides} gate={value.mode !== "print"}>
         {children}
       </ThemeScope>
     </RenderContext>
