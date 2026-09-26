@@ -11,12 +11,12 @@ import type { Device, TrackEvents } from "@bridger/shared";
  *  - Block visibility: IntersectionObserver (≥50% visible), accumulated only while active.
  *  - Clicks/taps are stored relative to the block's box; mouse movement is desktop-only,
  *    sampled every 150 ms and only after moving 20+ px.
- *  - Batches flush every 5 s, and once more via sendBeacon when the page is hidden.
+ *  - Batches flush every 15 s, and once more via sendBeacon when the page is hidden.
  */
 
 const SESSION_DELAY_MS = 3_000;
 const ACTIVE_WINDOW_MS = 30_000;
-const FLUSH_MS = 5_000;
+const FLUSH_MS = 15_000;
 const TICK_MS = 1_000;
 const MOVE_SAMPLE_MS = 150;
 const MOVE_MIN_PX = 20;

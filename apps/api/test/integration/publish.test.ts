@@ -1,6 +1,6 @@
 import type { ClientRow, ProposalDetail, PublicProposal, PublicProposalMeta, TemplateSummary } from "@bridger/shared";
 import { beforeAll, describe, expect, it } from "vitest";
-import { adminDb, api, env, ownerToken, publicApi } from "./helpers.js";
+import { adminDb, api, env, limiter, ownerToken, publicApi } from "./helpers.js";
 
 type Call = ReturnType<typeof api>;
 let call: Call;
@@ -103,9 +103,8 @@ describe("publishing", () => {
     expect((await publicApi("POST", `/proposals/${p.slug}/extension-request`, { message: "Still interested!" }, e)).status).toBe(200);
     const events = await adminDb().from("audit_events").select("event_type, actor, metadata").eq("proposal_id", p.id).eq("event_type", "extension_requested");
     expect(events.data![0]).toMatchObject({ actor: "client", metadata: { message: "Still interested!" } });
-    // Rate limited per IP
-    for (let i = 0; i < 4; i++) await publicApi("POST", `/proposals/${p.slug}/extension-request`, {}, e);
-    expect((await publicApi("POST", `/proposals/${p.slug}/extension-request`, {}, e)).status).toBe(429);
+    // Rate limited per IP (the Workers Rate Limiting binding; here a stand-in that says no)
+    expect((await publicApi("POST", `/proposals/${p.slug}/extension-request`, {}, { ...e, RL_PUBLIC: limiter("deny") })).status).toBe(429);
 
     // Marked expired (as the Phase 5 cron will do), then extended by moving the date.
     await adminDb().from("proposals").update({ status: "expired" }).eq("id", p.id);

@@ -494,7 +494,7 @@ It's only active on the public viewer. It's off in preview, in print, for owner 
 - **Clicks and taps:** position relative to the block's box → `x_pct`, `y_pct`, `block_id`.
 - **Mouse movement:** desktop only, sampled every 150 ms, and only when the cursor has moved more than 20 px.
 - **Pricing toggles:** logged as events.
-- **Batching:** a queue flushed every 5 seconds to `POST /t/events`, plus a final flush on `visibilitychange: hidden` / `pagehide` using `navigator.sendBeacon`.
+- **Batching:** a queue flushed every 15 seconds to `POST /t/events`, plus a final flush on `visibilitychange: hidden` / `pagehide` using `navigator.sendBeacon`.
 - **Payload** (validated by Zod): `{ sessionId, blockStats: [{blockId, visibleMsDelta, entered}], points: [...], pricing: [...], activeMsDelta, maxScrollPct }`
 
 ### 11.2 Worker ingest

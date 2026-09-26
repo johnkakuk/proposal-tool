@@ -22,7 +22,7 @@ async function json(c: Context<AppEnv>): Promise<unknown> {
   }
 }
 
-const scale = (c: Context<AppEnv>) => Number(c.env.RATE_LIMIT_SCALE ?? 1) || 1;
+const rl = (c: Context<AppEnv>) => ({ off: c.env.RATE_LIMIT_OFF });
 const ip = (c: Context<AppEnv>) => c.req.header("CF-Connecting-IP") ?? "127.0.0.1";
 
 export const track = new Hono<AppEnv>()
@@ -33,7 +33,7 @@ export const track = new Hono<AppEnv>()
     c.header("Cache-Control", "no-store");
   })
   .post("/session", async (c) => {
-    await rateLimit(c.env.RATE_KV, `ts:${ip(c)}`, 60, 3600, scale(c));
+    await rateLimit(c.env.RL_PUBLIC, `ts:${ip(c)}`, rl(c));
     const input = parseOr422(TrackSessionSchema, await json(c));
     const { result, background } = await startSession(c.env, serviceClient(c.env), input, {
       ip: ip(c),
@@ -45,10 +45,10 @@ export const track = new Hono<AppEnv>()
     return c.json(result);
   })
   .post("/events", async (c) => {
+    // Per IP only: a tab flushes every 15 s (4/min), so 100/min leaves room for a shared
+    // office IP. Sessions aren't limited separately; ingest checks the session in Supabase.
+    await rateLimit(c.env.RL_TRACK_EVENTS, `tei:${ip(c)}`, rl(c));
     const input = parseOr422(TrackEventsSchema, await json(c));
-    // Flushes every 5 s → ~120 per 10 min; allow headroom, per session and per IP.
-    await rateLimit(c.env.RATE_KV, `te:${input.sessionId}`, 200, 600, scale(c));
-    await rateLimit(c.env.RATE_KV, `tei:${ip(c)}`, 1000, 600, scale(c));
     const { background } = await ingestEvents(c.env, serviceClient(c.env), input);
     if (background) c.executionCtx.waitUntil(background);
     return c.body(null, 204);

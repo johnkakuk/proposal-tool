@@ -1,8 +1,8 @@
 import { canonicalJson, sha256Hex, type ClientRow, type PricingSection, type ProposalDetail, type PublicCertificate, type PublicProposal, type TemplateSummary } from "@bridger/shared";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { memoryOutbox } from "../../src/lib/email.js";
 import { createRenderToken } from "../../src/lib/renderToken.js";
-import { adminDb, api, env, ownerToken, publicApi } from "./helpers.js";
+import { adminDb, api, env, limiter, ownerToken, publicApi } from "./helpers.js";
 
 type Call = ReturnType<typeof api>;
 let call: Call;
@@ -145,6 +145,40 @@ describe("signing", () => {
     } finally {
       await adminDb().from("settings").update({ require_signer_email_otp: true }).neq("owner_id", "00000000-0000-0000-0000-000000000000");
     }
+  });
+
+  it("OTP, sign, and decline still work when the rate limiter is broken (fails open)", async () => {
+    const broken = { ...env(), RL_PUBLIC: limiter("throw"), RL_TRACK_EVENTS: limiter("throw") };
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // Sign, with email verification on (the default)
+      const p = await publishedProposal(`Limiter down ${run}`);
+      const email = `limiter.${run}@cascade.test`;
+      const before = memoryOutbox.length;
+      expect((await publicApi("POST", `/proposals/${p.slug}/otp`, { email }, broken)).status).toBe(200);
+      const code = /\b(\d{6})\b/.exec(memoryOutbox.slice(before).find((m) => m.to === email && m.template === "otp")!.text)![1]!;
+      expect((await publicApi("POST", `/proposals/${p.slug}/otp/verify`, { email, code }, broken)).status).toBe(200);
+      const signed = await publicApi("POST", `/proposals/${p.slug}/sign`, { version: 1, selections: selectionsFor(p.pricing.sections), signer: signer(email), signature: { type: "typed", text: "Morgan Lee" }, consent: true, timezoneOffsetMinutes: 0 }, broken);
+      expect(signed.status).toBe(200);
+
+      // Decline another one
+      const q = await publishedProposal(`Limiter down decline ${run}`);
+      expect((await publicApi("POST", `/proposals/${q.slug}/decline`, { reason: "Not now" }, broken)).status).toBe(200);
+      expect((await call<ProposalDetail>("GET", `/proposals/${q.id}`)).body.status).toBe("declined");
+
+      // Each failure was logged, not surfaced
+      expect(log.mock.calls.some(([m]) => String(m).includes("rate limiter unavailable for sign"))).toBe(true);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("the limiter is wired in: when it says no, public actions get 429", async () => {
+    const limited = { ...env(), RL_PUBLIC: limiter("deny") };
+    const p = await publishedProposal(`Limited ${run}`);
+    const r = await publicApi<{ error: { code: string } }>("POST", `/proposals/${p.slug}/otp`, { email: `x.${run}@cascade.test` }, limited);
+    expect([r.status, r.body.error.code]).toEqual([429, "rate_limited"]);
+    expect((await publicApi("POST", `/proposals/${p.slug}/decline`, {}, limited)).status).toBe(429);
   });
 
   it("permanently deletes a signed proposal only with explicit confirmation, removing its files", async () => {

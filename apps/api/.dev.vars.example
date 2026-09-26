@@ -12,5 +12,5 @@ SIGNING_SECRET=generate-a-long-random-string
 EMAIL_FROM=Bridger Digital <proposals@bridger.local>
 EMAIL_TRANSPORT=mailpit
 MAILPIT_URL=http://127.0.0.1:54324
-# Local dev: every test run shares one IP, so public rate limits are relaxed.
-RATE_LIMIT_SCALE=100
+# Local dev: every test run shares one IP, so rate limiting is off. Never set in production.
+RATE_LIMIT_OFF=1

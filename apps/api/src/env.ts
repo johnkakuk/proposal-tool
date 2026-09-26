@@ -20,14 +20,19 @@ export interface Env {
   /** resend (production) | mailpit (local dev: Supabase's bundled Mailpit) | memory (tests). */
   EMAIL_TRANSPORT?: "resend" | "mailpit" | "memory";
   MAILPIT_URL?: string;
-  /** Multiplies public rate limits. Unset (1) in production; raised in local dev. */
-  RATE_LIMIT_SCALE?: string;
+  /** "1" turns rate limiting off (local dev and tests share one IP). Never set in production. */
+  RATE_LIMIT_OFF?: string;
   // Bindings
   BROWSER: Fetcher;
+  /** Workers Rate Limiting (wrangler.jsonc `ratelimits`). Public actions: 3 per minute per key. */
+  RL_PUBLIC?: RateLimit;
+  /** Tracking event batches: 100 per minute per IP. */
+  RL_TRACK_EVENTS?: RateLimit;
   // KV
   OAUTH_KV: KVNamespace;
   /** Set by the OAuth provider wrapper (src/index.ts); absent in unit tests. */
   OAUTH_PROVIDER?: OAuthHelpers;
+  /** Signed-PDF retry counts only (services/pdf.ts). Rate limiting no longer uses KV. */
   RATE_KV: KVNamespace;
 }
 
