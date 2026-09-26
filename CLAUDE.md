@@ -9,6 +9,7 @@ Self-hosted proposal builder (Prospero replacement) for Bridger Digital. The ful
 - **Pricing math lives only in `packages/shared/src/pricing.ts`.** The client and server both use it. The server always recomputes and never trusts client totals.
 - **Signed proposals are immutable**, enforced by DB triggers (`supabase/migrations/*_immutability.sql`) *and* in app code. The only way forward is "Duplicate as new revision". The single exception is John permanently deleting an **archived** signed proposal: `purge_proposal(id, owner, p_confirm_signed => true)` (human-only route, `?confirmSigned=true`, after typing "delete"), which removes it with its signature, versions, audit trail, and stored files in one transaction. Nothing else may update or delete signed records.
 - **Service-role key stays in Worker secrets.** It must never reach the browser.
+- **Rate limiting** uses the Workers Rate Limiting binding (`ratelimits` in `apps/api/wrangler.jsonc`: `RL_PUBLIC` 3/min, `RL_TRACK_EVENTS` 100/min, keyed per IP), never KV: KV's free tier is 1,000 writes/day. `lib/rateLimit.ts` **fails open** (a broken limiter logs and allows; it must never block OTP, sign, or decline). `RATE_LIMIT_OFF=1` in local `.dev.vars` only.
 - **The AI never deletes.** MCP tools can archive, not delete.
 
 ## Layout
@@ -67,8 +68,8 @@ scripts/        starter-templates.ts + gen-seed-templates.ts
 - **Tracker** (`apps/web/src/tracking/tracker.ts`) runs on the public viewer only. It's off in print, under `navigator.webdriver`, and when an admin session exists in localStorage.
   - The session starts after 3 s visible; active time requires input in the last 30 s.
   - Block visibility uses IntersectionObserver ≥50%. Points are block-relative (0–1); mouse movement is desktop-only (150 ms / 20 px).
-  - Flushes every 5 s, plus a `sendBeacon` (text/plain) on hide.
-- **Ingest** (`/t/session`, `/t/events`, `services/tracking.ts`) caps payloads at 64 KB and rate-limits.
+  - Flushes every 15 s, plus a `sendBeacon` (text/plain) on hide (the beacon catches the tail).
+- **Ingest** (`/t/session`, `/t/events`, `services/tracking.ts`) caps payloads at 64 KB and rate-limits per IP only (the session is validated in Supabase).
   - Bots: `isBotUserAgent` (shared). Owner: admin-session hint, `settings.excluded_ips`, or the signed HttpOnly `bdp_owner` cookie. Owner/bot sessions are stored flagged but hold **no events** and never touch status or notifications.
   - IPs are only stored as a salted SHA-256; the referrer is reduced to its hostname.
 - **DB:** `ingest_tracking` (atomic batch; 3,000 points/session), `rollup_heatmaps` (nightly: >24 h → `heatmap_cells`; raw deleted after 90 d), `heatmap_grid` (cells + fresh raw; bucket via `::numeric` to avoid float edge cases).

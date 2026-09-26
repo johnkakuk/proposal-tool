@@ -56,7 +56,7 @@ The Free plan pauses projects after a week without activity. The Worker's hourly
 cd apps/api
 pnpm exec wrangler login
 pnpm exec wrangler kv namespace create OAUTH_KV
-pnpm exec wrangler kv namespace create RATE_KV
+pnpm exec wrangler kv namespace create RATE_KV   # signed-PDF retry counts
 ```
 
 Paste the two ids into `apps/api/wrangler.jsonc` (production ids are already filled in for Bridger's account).
@@ -145,6 +145,6 @@ Then connect the domain:
 | --- | --- | --- |
 | Workers | 100k requests/day | Requests fail until the daily reset |
 | Browser Rendering | 10 min/day, 3 concurrent | PDFs queue and are retried hourly |
-| KV | 1k writes/day | Rate limiting and OAuth use very few writes |
+| KV | 1k writes/day | Only OAuth grants and signed-PDF retries write to KV (a handful a day). Rate limiting uses the Workers Rate Limiting binding, which doesn't touch KV |
 | Supabase | 500 MB database, 1 GB storage | Plenty for years of proposals |
 | Resend | 100 emails/day, 3,000/month | Sends fail and are logged in `email_log` |

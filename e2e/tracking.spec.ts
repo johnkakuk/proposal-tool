@@ -70,7 +70,7 @@ test("owner and bot visits never count; a real reader does", async ({ page, brow
     await reader.mouse.wheel(0, 250);
     await reader.waitForTimeout(1_000);
   }
-  await expect.poll(async () => (await sessionsFor(id)).find((s) => !s.is_bot && !s.is_owner)?.active_ms ?? 0, { timeout: 20_000 }).toBeGreaterThan(4_000);
+  await expect.poll(async () => (await sessionsFor(id)).find((s) => !s.is_bot && !s.is_owner)?.active_ms ?? 0, { timeout: 30_000 }).toBeGreaterThan(4_000);
   await reader.context().close();
 
   const sessions = await sessionsFor(id);
@@ -108,9 +108,9 @@ test("the heatmap puts clicks in the right spots on desktop and mobile", async (
   await mobile.waitForTimeout(3_500);
   await hitBlock(mobile, "cover", 0.75, 0.5, true);
 
-  // Both flush within ~5 s (mouse movement on the way to a click is recorded too, as "move")
+  // Both flush within ~15 s (mouse movement on the way to a click is recorded too, as "move")
   await expect
-    .poll(async () => (await adminDb().from("heatmap_points").select("id", { count: "exact", head: true }).eq("proposal_id", id).in("kind", ["click", "tap"])).count, { timeout: 20_000 })
+    .poll(async () => (await adminDb().from("heatmap_points").select("id", { count: "exact", head: true }).eq("proposal_id", id).in("kind", ["click", "tap"])).count, { timeout: 30_000 })
     .toBe(3);
   await desktop.context().close();
   await mobile.context().close();

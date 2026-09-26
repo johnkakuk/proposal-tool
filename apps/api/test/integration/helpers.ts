@@ -17,6 +17,8 @@ export function env(): Env {
     OWNER_EMAIL: "owner@bridger.local",
     RATE_KV: memoryKv(),
     OAUTH_KV: memoryKv(),
+    RL_PUBLIC: limiter("allow"),
+    RL_TRACK_EVENTS: limiter("allow"),
     SIGNING_SECRET: "integration-signing-secret",
     EMAIL_FROM: "Bridger Digital <proposals@bridger.test>",
     EMAIL_TRANSPORT: "memory",
@@ -46,7 +48,17 @@ export function api(token: string | null) {
   };
 }
 
-/** In-memory stand-in for a KV namespace (enough for rate limits and the OAuth provider). */
+/** Stand-ins for a Workers Rate Limiting binding: always allow, always deny, or broken. */
+export function limiter(mode: "allow" | "deny" | "throw") {
+  return {
+    limit: async (_: { key: string }) => {
+      if (mode === "throw") throw new Error("rate limiter exploded");
+      return { success: mode === "allow" };
+    },
+  };
+}
+
+/** In-memory stand-in for a KV namespace (the OAuth provider and PDF retry counts). */
 export function memoryKv() {
   const m = new Map<string, { value: string; expires?: number }>();
   const live = (k: string) => {
